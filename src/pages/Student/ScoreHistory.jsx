@@ -82,10 +82,34 @@ const ScoreHistory = () => {
       <div className="max-w-5xl mx-auto space-y-5">
 
         <div>
-          <h1 className="text-2xl font-bold font-heading text-white">Score Intelligence 🧠</h1>
+          <h1 className="text-2xl font-bold font-heading text-white">
+            Why Is Your Score {scoreData?.total ?? '...'}? 🔍
+          </h1>
           <p className="text-gray-500 text-sm mt-1">
             Full transparency into your skill score + improvement areas
           </p>
+        </div>
+
+        {/* Tamper-Proof Explanation */}
+        <div className="p-4 rounded-xl"
+          style={{ background: 'rgba(0,255,148,0.04)', border: '1px solid rgba(0,255,148,0.15)' }}>
+          <p className="text-xs font-bold text-primary mb-1.5">🔒 Why This Score Cannot Be Faked</p>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Your Genois Score is built exclusively from <span className="text-white font-semibold">real daily activity</span> — tasks completed, tests attempted, nodes unlocked, and projects submitted with GitHub evidence.
+            There is no way to manually inflate it. No certificate upload. No self-rating. Every point is earned.
+          </p>
+          <div className="flex flex-wrap gap-3 mt-3">
+            {[
+              { label: 'Tasks (30%)', icon: '✅' },
+              { label: 'Tests (25%)', icon: '📝' },
+              { label: 'Projects (30%)', icon: '💻' },
+              { label: 'Activity/Streak (15%)', icon: '🔥' },
+            ].map((item, i) => (
+              <span key={i} className="flex items-center gap-1 text-xs text-gray-500">
+                {item.icon} {item.label}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Job Readiness Meter */}

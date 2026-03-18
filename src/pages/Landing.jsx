@@ -33,11 +33,11 @@ const Landing = () => {
             <span className="text-xs text-primary font-medium">Built for Tier 3 Engineers</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-heading text-white mb-6 leading-tight">
-            You're more skilled than
-            <span style={{color:'#00FF94'}}> your resume shows.</span>
+            Replace Your Resume With
+            <span style={{color:'#00FF94'}}> Real Skill Identity.</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-8">
-            Genois builds your verified skill identity from real work — so companies find you based on actual ability, not CGPA or connections.
+            Genois builds verified proof of your skills through real tasks, tests and projects — so companies find you by what you can do, not what you studied.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/register" className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-dark-900 font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm">
@@ -48,6 +48,20 @@ const Landing = () => {
             </Link>
           </div>
           <p className="text-xs text-gray-600 mt-4">No resume required. No fake certificates. Just your real skills.</p>
+
+          {/* Trust Stats */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-8 pt-6 border-t border-dark-700">
+            {[
+              { value: '100%', label: 'Activity-Verified Score', color: '#00FF94' },
+              { value: '₹0', label: 'Fake Certificates Needed', color: '#7B61FF' },
+              { value: '6+', label: 'Engineering Domains', color: '#4A9EFF' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-2xl font-bold font-heading" style={{color: stat.color}}>{stat.value}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </motion.div>
       </section>
 
@@ -74,25 +88,35 @@ const Landing = () => {
         </motion.div>
       </section>
 
-      {/* How It Works */}
+      {/* How It Works — 5 Steps */}
       <section className="py-16 px-6 max-w-4xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-bold font-heading text-center text-white mb-10">
-          Genois fixes this in 3 steps
+        <h2 className="text-2xl md:text-3xl font-bold font-heading text-center text-white mb-3">
+          From Zero to Job-Ready in One System
         </h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {[
-            { step:'01', icon: <TrendingUp size={20} className="text-primary"/>, title:'Learn at Your Level', desc:'AI generates a roadmap calibrated to YOUR ability — not IIT speed. Daily tasks you can actually complete.' },
-            { step:'02', icon: <Shield size={20} className="text-secondary"/>, title:'Build Real Proof', desc:'Complete verified tests, build projects with GitHub evidence. Your 30-day activity becomes your Genois Score.' },
-            { step:'03', icon: <Star size={20} className="text-yellow-400"/>, title:'Companies Find You', desc:'Your verified profile replaces your resume. Companies search by Genois Score — no application needed.' },
-          ].map((item, i) => (
-            <motion.div key={i} initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:i*0.15}}
-              className="bg-dark-800 border border-dark-600 rounded-xl p-6 relative">
-              <div className="absolute top-4 right-4 text-3xl font-bold text-dark-600 font-heading">{item.step}</div>
-              <div className="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center mb-4">{item.icon}</div>
-              <h3 className="font-semibold text-white mb-2 font-heading">{item.title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
-            </motion.div>
-          ))}
+        <p className="text-center text-gray-500 text-sm mb-10">Five steps. No college rank required.</p>
+        <div className="relative">
+          {/* Connector line */}
+          <div className="hidden md:block absolute top-8 left-[10%] right-[10%] h-0.5 bg-dark-600 z-0" />
+          <div className="grid md:grid-cols-5 gap-4 relative z-10">
+            {[
+              { step:'01', icon: '🎯', title:'Pick Domain', desc:'Choose your engineering path: Fullstack, DSA, AI/ML, Cyber, DevOps, or Android.', color:'#00FF94' },
+              { step:'02', icon: '🗺️', title:'Get Roadmap', desc:'AI builds a personalized learning roadmap with nodes calibrated to your level.', color:'#4A9EFF' },
+              { step:'03', icon: '✅', title:'Do Daily Tasks', desc:'Complete 1–4 tasks/day based on your timeline. Build real proof every day.', color:'#7B61FF' },
+              { step:'04', icon: '📝', title:'Pass Tests', desc:'Take verified domain tests. Every score is recorded and cannot be faked.', color:'#FFB347' },
+              { step:'05', icon: '🚀', title:'Share Profile', desc:'Your Genois Score replaces your resume. Companies find you by what you built.', color:'#FFD700' },
+            ].map((item, i) => (
+              <motion.div key={i} initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:i*0.1}}
+                className="bg-dark-800 border border-dark-600 rounded-xl p-4 text-center">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg mx-auto mb-3"
+                  style={{background:`${item.color}15`, border:`1px solid ${item.color}30`}}>
+                  {item.icon}
+                </div>
+                <div className="text-xs font-bold mb-1" style={{color: item.color}}>{item.step}</div>
+                <h3 className="font-semibold text-white mb-1.5 font-heading text-sm">{item.title}</h3>
+                <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 

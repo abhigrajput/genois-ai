@@ -4,7 +4,7 @@ import { Flame, Zap, CheckCircle, Clock,
          TrendingUp, Star, Play, FolderOpen, AlertTriangle } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
-import { calculateDetailedScore } from '../../lib/scoring';
+import { calculateDetailedScore, getJobReadiness, detectWeaknesses } from '../../lib/scoring';
 import useStore from '../../store/useStore';
 import usePlan from '../../hooks/usePlan';
 import useStreak from '../../hooks/useStreak';
@@ -73,6 +73,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
   const [scoreData, setScoreData] = useState(null);
+  const [jobReadiness, setJobReadiness] = useState(null);
+  const [weaknesses, setWeaknesses] = useState(null);
+  const [tests, setTests] = useState([]);
+  const [skills, setSkills] = useState([]);
   const [projects, setProjects] = useState([]);
   const [projectMilestone, setProjectMilestone] = useState(null);
 
@@ -97,10 +101,26 @@ const Dashboard = () => {
     const done = todayTasks.filter(t => t.status === 'completed').length;
     setTodayStats({ done, total: todayTasks.length, minutes: done * 25 });
 
-    // Load score breakdown in background
+    // Load score breakdown + job readiness in background
     calculateDetailedScore(profile.id, supabase)
-      .then(setScoreData)
+      .then(sd => {
+        setScoreData(sd);
+        setJobReadiness(getJobReadiness(sd, profile));
+      })
       .catch(() => {});
+
+    // Load tests + skills for weakness detection
+    const [testRes, skillRes] = await Promise.all([
+      supabase.from('test_attempts').select('*').eq('student_id', profile.id),
+      supabase.from('skill_scores').select('*').eq('student_id', profile.id),
+    ]);
+    const testData  = testRes.data  || [];
+    const skillData = skillRes.data || [];
+    setTests(testData);
+    setSkills(skillData);
+    const { data: taskData2 } = await supabase
+      .from('tasks').select('*').eq('student_id', profile.id);
+    setWeaknesses(detectWeaknesses(testData, skillData, taskData2 || []));
 
     // Load projects + check milestone
     const { data: projectData } = await supabase
@@ -175,28 +195,79 @@ const Dashboard = () => {
           </p>
         </motion.div>
 
+        {/* Job Readiness Meter */}
+        {jobReadiness && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="mb-5 p-4 rounded-xl"
+            style={{ background: `${jobReadiness.color}08`, border: `1px solid ${jobReadiness.color}20` }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{jobReadiness.badge}</span>
+                <div>
+                  <p className="text-sm font-bold text-white">Job Readiness</p>
+                  <p className="text-xs text-gray-500">{jobReadiness.status}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xl font-bold font-heading" style={{ color: jobReadiness.color }}>
+                  {jobReadiness.percentage}%
+                </span>
+                <Link to="/student/score" className="block text-xs text-primary hover:underline">
+                  see breakdown →
+                </Link>
+              </div>
+            </div>
+            <div className="h-2 bg-dark-600 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${jobReadiness.percentage}%` }}
+                transition={{ duration: 1.5 }}
+                className="h-full rounded-full"
+                style={{ background: jobReadiness.color }}
+              />
+            </div>
+          </motion.div>
+        )}
+
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Genois Score', value: Math.round(profile?.skill_score || 0), icon: <Zap size={16}/>, color: tier.color, sub: tier.label },
-            { label: 'Day Streak', value: daysActive, icon: <Flame size={16}/>, color: '#FFB347', sub: daysActive >= 7 ? '🔥 On fire!' : 'Keep going' },
-            { label: 'Done Today', value: `${todayStats.done}/${todayStats.total || '?'}`, icon: <CheckCircle size={16}/>, color: '#00FF94', sub: 'tasks' },
-            { label: 'Study Time', value: `${todayStats.minutes}m`, icon: <Clock size={16}/>, color: '#4A9EFF', sub: 'today' },
-          ].map((kpi, i) => (
-            <motion.div key={i}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-dark-800 border border-dark-600 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2" style={{ color: kpi.color }}>
-                {kpi.icon}
-                <span className="text-xs text-gray-500">{kpi.label}</span>
-              </div>
-              <div className="text-2xl font-bold font-heading" style={{ color: kpi.color }}>
-                {kpi.value}
-              </div>
-              <div className="text-xs text-gray-600 mt-1">{kpi.sub}</div>
-            </motion.div>
-          ))}
+            { label: 'Genois Score', value: Math.round(profile?.skill_score || 0), icon: <Zap size={16}/>, color: tier.color, sub: tier.label, link: '/student/score' },
+            { label: 'Day Streak', value: daysActive, icon: <Flame size={16}/>, color: '#FFB347', sub: daysActive >= 7 ? '🔥 On fire!' : 'Keep going', link: null },
+            { label: 'Done Today', value: `${todayStats.done}/${todayStats.total || '?'}`, icon: <CheckCircle size={16}/>, color: '#00FF94', sub: 'tasks', link: '/student/tasks' },
+            { label: 'Study Time', value: `${todayStats.minutes}m`, icon: <Clock size={16}/>, color: '#4A9EFF', sub: 'today', link: null },
+          ].map((kpi, i) => {
+            const inner = (
+              <>
+                <div className="flex items-center gap-2 mb-2" style={{ color: kpi.color }}>
+                  {kpi.icon}
+                  <span className="text-xs text-gray-500">{kpi.label}</span>
+                </div>
+                <div className="text-2xl font-bold font-heading" style={{ color: kpi.color }}>
+                  {kpi.value}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">{kpi.sub}</div>
+                {i === 0 && <div className="text-xs text-primary mt-1">see breakdown →</div>}
+              </>
+            );
+            return kpi.link ? (
+              <Link key={i} to={kpi.link}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-dark-800 border border-dark-600 rounded-xl p-4 hover:border-primary/40 transition-colors cursor-pointer">
+                  {inner}
+                </motion.div>
+              </Link>
+            ) : (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-dark-800 border border-dark-600 rounded-xl p-4">
+                {inner}
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Score Transparency Card */}
@@ -204,6 +275,68 @@ const Dashboard = () => {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="mb-6">
             <ScoreTransparencyCard scoreData={scoreData} />
+          </motion.div>
+        )}
+
+        {/* Your Journey Progress */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-6 bg-dark-800 border border-dark-600 rounded-xl p-4">
+          <h2 className="font-semibold text-white font-heading text-sm mb-3">Your Journey 🗺️</h2>
+          <div className="flex items-center gap-1">
+            {[
+              { label: 'Domain Picked',   done: !!profile?.domain_id },
+              { label: 'Timeline Set',    done: !!profile?.timeline },
+              { label: 'First Node Done', done: (todayStats.done > 0 || (scoreData?.raw?.completedNodes ?? 0) > 0) },
+              { label: 'Test Passed',     done: (tests || []).some(t => t.passed) },
+              { label: 'Project Added',   done: projects.length > 0 },
+            ].map((step, i, arr) => (
+              <React.Fragment key={i}>
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    step.done ? 'bg-primary text-dark-900' : 'bg-dark-600 text-gray-600'
+                  }`}>
+                    {step.done ? '✓' : i + 1}
+                  </div>
+                  <span className="text-xs text-center leading-tight hidden md:block"
+                    style={{ color: step.done ? '#00FF94' : '#555', fontSize: '9px', maxWidth: '60px' }}>
+                    {step.label}
+                  </span>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className="flex-1 h-0.5 mb-3"
+                    style={{ background: step.done ? '#00FF94' : 'rgba(255,255,255,0.08)' }} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Weakness Alert */}
+        {weaknesses?.weakAreas?.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl border border-danger/20 bg-danger/5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={14} className="text-danger" />
+                <p className="text-sm font-semibold text-white">Weak Areas Detected</p>
+              </div>
+              <Link to="/student/score" className="text-xs text-primary hover:underline">
+                See full analysis →
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {weaknesses.weakAreas.slice(0, 3).map((w, i) => (
+                <span key={i}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg"
+                  style={{
+                    background: w.severity === 'high' ? 'rgba(255,107,107,0.1)' : 'rgba(255,179,71,0.1)',
+                    color: w.severity === 'high' ? '#FF6B6B' : '#FFB347',
+                    border: `1px solid ${w.severity === 'high' ? 'rgba(255,107,107,0.25)' : 'rgba(255,179,71,0.25)'}`,
+                  }}>
+                  {w.severity === 'high' ? '🔴' : '🟡'} {w.area}
+                </span>
+              ))}
+            </div>
           </motion.div>
         )}
 

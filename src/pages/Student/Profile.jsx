@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Github, Linkedin, ExternalLink,
          Download, Edit, MapPin, GraduationCap,
-         Shield, Star, Zap, Calendar } from 'lucide-react';
+         Shield, Star, Zap, Calendar, Eye } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
+import { generateCompanyTrustSummary } from '../../lib/scoring';
 import useStore from '../../store/useStore';
 import toast from 'react-hot-toast';
 
@@ -32,6 +33,7 @@ const Profile = () => {
   const [nodes, setNodes] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [editing, setEditing] = useState(false);
+  const [recruiterView, setRecruiterView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editForm, setEditForm] = useState({
     full_name: '', bio: '', github_username: '',
@@ -157,7 +159,16 @@ const Profile = () => {
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-success border-2 border-dark-800" />
               </div>
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2 mb-2 flex-wrap">
+                <button onClick={() => setRecruiterView(!recruiterView)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                  style={{
+                    background: recruiterView ? 'rgba(123,97,255,0.15)' : 'rgba(123,97,255,0.08)',
+                    color: '#7B61FF',
+                    border: '1px solid rgba(123,97,255,0.3)',
+                  }}>
+                  <Eye size={13} /> {recruiterView ? 'My View' : 'View as Recruiter'}
+                </button>
                 <button onClick={() => setEditing(!editing)}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
                   style={{ background: 'rgba(0,255,148,0.1)', color: '#00FF94', border: '1px solid rgba(0,255,148,0.3)' }}>
@@ -269,6 +280,32 @@ const Profile = () => {
             )}
           </div>
         </motion.div>
+
+        {/* Recruiter View Banner + Trust Summary */}
+        {recruiterView && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2 text-xs font-semibold"
+              style={{ background: 'rgba(123,97,255,0.12)', color: '#7B61FF', borderBottom: '1px solid rgba(123,97,255,0.2)' }}>
+              <Eye size={11} /> Recruiter View — This is how companies see your profile
+            </div>
+            <div className="p-4"
+              style={{ background: 'rgba(123,97,255,0.05)', border: '1px solid rgba(123,97,255,0.15)', borderTop: 'none' }}>
+              <p className="text-xs font-semibold text-secondary mb-2">🤖 AI Trust Summary</p>
+              <p className="text-sm text-gray-300 leading-relaxed italic">
+                "{generateCompanyTrustSummary(null, profile, skills, projects)}"
+              </p>
+              <div className="mt-3 pt-3 border-t border-dark-600 flex items-center gap-3 flex-wrap">
+                <span className="text-xs text-gray-500">What recruiters can see on your public profile:</span>
+                {['Genois Score', 'Verified Skills', 'Projects', 'Test History', 'Streak', 'Badges'].map((item, i) => (
+                  <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-dark-700 text-gray-400">
+                    ✓ {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Stats Row */}
         <div className="grid grid-cols-4 gap-3">

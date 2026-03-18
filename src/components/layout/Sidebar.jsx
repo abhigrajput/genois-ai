@@ -10,19 +10,19 @@ import {
 import useStore from '../../store/useStore';
 
 const studentNav = [
-  { icon: LayoutDashboard, label: 'Dashboard',  path: '/student/dashboard' },
-  { icon: Map,             label: 'Roadmap',    path: '/student/roadmap'   },
-  { icon: CheckSquare,     label: 'Tasks',      path: '/student/tasks'     },
-  { icon: FileText,        label: 'Tests',      path: '/student/tests'     },
-  { icon: Zap,             label: 'Skills',     path: '/student/skills'    },
-  { icon: User,            label: 'Profile',    path: '/student/profile'   },
-  { icon: FileEdit,        label: 'Resume',     path: '/student/resume'    },
-  { icon: BarChart2,       label: 'Analytics',  path: '/student/analytics' },
-  { icon: Brain,           label: 'Skill DNA',   path: '/student/skill-dna' },
-  { icon: TrendingUp,      label: 'Score Intel', path: '/student/score'     },
-  { icon: BookOpen,        label: 'Notes',       path: '/student/notes'     },
-  { icon: MessageCircle,   label: '2AM Chat',    path: '/student/chat'      },
-  { icon: Compass,         label: 'Domains',     path: '/student/domains'   },
+  { icon: LayoutDashboard, label: 'Dashboard',      path: '/student/dashboard' },
+  { icon: Map,             label: 'Roadmap',         path: '/student/roadmap'   },
+  { icon: Compass,         label: 'Domains',         path: '/student/domains'   },
+  { icon: CheckSquare,     label: 'Tasks',           path: '/student/tasks'     },
+  { icon: FileText,        label: 'Tests',           path: '/student/tests'     },
+  { icon: Zap,             label: 'Skill Identity',  path: '/student/skills'    },
+  { icon: TrendingUp,      label: 'Score Intel',     path: '/student/score'     },
+  { icon: User,            label: 'Profile',         path: '/student/profile'   },
+  { icon: FileEdit,        label: 'Resume',          path: '/student/resume'    },
+  { icon: BarChart2,       label: 'Analytics',       path: '/student/analytics' },
+  { icon: Brain,           label: 'Skill DNA',       path: '/student/skill-dna' },
+  { icon: BookOpen,        label: 'Notes',           path: '/student/notes'     },
+  { icon: MessageCircle,   label: '2AM Chat',        path: '/student/chat'      },
 ];
 
 const companyNav = [

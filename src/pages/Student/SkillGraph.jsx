@@ -153,11 +153,21 @@ const SkillGraph = () => {
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold font-heading text-white">Skill Graph ⚡</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Your verified skill identity — built from real performance
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold font-heading text-white">Skill Identity ⚡</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Your verified proof of skills — built from real tasks, tests &amp; projects
+            </p>
+          </div>
+          <a
+            href={`/u/${profile?.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0"
+            style={{ background: 'rgba(0,255,148,0.1)', color: '#00FF94', border: '1px solid rgba(0,255,148,0.3)' }}>
+            🔗 Share Skill Identity
+          </a>
         </div>
 
         {/* Genois Score Hero */}
