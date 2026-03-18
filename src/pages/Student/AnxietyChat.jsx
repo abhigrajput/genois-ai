@@ -115,7 +115,7 @@ const AnxietyChat = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
+      <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)]">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}

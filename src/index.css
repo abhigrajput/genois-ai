@@ -21,3 +21,10 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover { background: #7B61FF; }
+
+@media (max-width: 768px) {
+  .mobile-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

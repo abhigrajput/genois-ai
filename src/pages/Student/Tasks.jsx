@@ -41,7 +41,23 @@ const Tasks = () => {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    if (profile?.id) fetchTasks();
+    if (!profile?.id) return;
+    const autoGenerate = async () => {
+      await fetchTasks();
+      if (activeTab === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todayCheck } = await supabase
+          .from('tasks')
+          .select('id')
+          .eq('student_id', profile.id)
+          .eq('due_date', today)
+          .limit(1);
+        if (!todayCheck || todayCheck.length === 0) {
+          await handleGenerateTasks();
+        }
+      }
+    };
+    autoGenerate();
   }, [profile, activeTab]);
 
   useEffect(() => {
@@ -245,6 +261,19 @@ const Tasks = () => {
     }
 
     toast.success('+15 Genois Points! 🔥');
+
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId ? { ...t, status: 'completed' } : t
+    );
+    const allDone = updatedTasks.every(t => t.status === 'completed');
+
+    if (allDone && updatedTasks.length > 0) {
+      toast.success('All tasks done! 🔥 Generating new ones...');
+      setTimeout(() => {
+        handleGenerateTasks();
+      }, 1500);
+    }
+
     fetchTasks();
     if (selectedTask?.id === taskId) setSelectedTask(null);
   };
