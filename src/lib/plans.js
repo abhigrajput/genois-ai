@@ -78,10 +78,12 @@ export const PLANS = {
 };
 
 export const canAccess = (plan, feature) => {
-  const p = PLANS[plan] || PLANS.free;
-  const val = p.features[feature];
+  const planConfig = PLANS[plan || 'free'];
+  if (!planConfig) return false;
+  const val = planConfig.features[feature];
+  if (val === undefined || val === null) return false;
   if (typeof val === 'boolean') return val;
-  if (typeof val === 'number')  return val === -1 || val > 0;
+  if (typeof val === 'number') return val === -1 || val > 0;
   return false;
 };
 
