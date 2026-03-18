@@ -207,7 +207,9 @@ const Assessment = () => {
         order_index: i,
         status: i === 0 ? 'unlocked' : 'locked',
         skills: node.skills || [],
-        estimated_days: 7,
+        resources: node.resources || [],
+        mini_project: node.mini_project || '',
+        estimated_days: node.estimated_days || 7,
       }));
 
       const { error: nodesError } = await supabase.from('roadmap_nodes').insert(nodesToInsert);

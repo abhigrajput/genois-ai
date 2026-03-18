@@ -377,21 +377,46 @@ const Roadmap = () => {
                     </div>
                   )}
 
-                  {selectedNode.resources?.length > 0 && (
-                    <div className="mb-6">
-                      <p className="text-xs text-gray-500 mb-2">Resources:</p>
-                      <div className="flex flex-col gap-2">
-                        {selectedNode.resources.map((r, i) => (
-                          <a key={i} href={r.url} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-2 p-2.5 bg-dark-700 rounded-lg hover:bg-dark-600 transition-all group">
-                            <span className="text-lg">
-                              {r.type === 'video' ? '📹' : r.type === 'docs' ? '📚' : '📝'}
-                            </span>
-                            <span className="text-xs text-gray-300 flex-1">{r.title}</span>
-                            <ExternalLink size={12} className="text-gray-600 group-hover:text-primary" />
-                          </a>
-                        ))}
+                  {selectedNode?.resources?.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                        📚 Learning Resources
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedNode.resources.map((res, i) => {
+                          const typeColors = {
+                            video:    { bg: 'rgba(255,107,107,0.1)', color: '#FF6B6B', icon: '🎥' },
+                            article:  { bg: 'rgba(74,158,255,0.1)',  color: '#4A9EFF', icon: '📖' },
+                            docs:     { bg: 'rgba(123,97,255,0.1)',  color: '#7B61FF', icon: '📄' },
+                            practice: { bg: 'rgba(0,255,148,0.1)',   color: '#00FF94', icon: '💻' },
+                          };
+                          const t = typeColors[res.type] || typeColors['article'];
+                          return (
+                            <a key={i} href={res.url} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-3 p-3 rounded-xl transition-all hover:opacity-90"
+                              style={{ background: t.bg, border: `1px solid ${t.color}25` }}>
+                              <span className="text-lg flex-shrink-0">{t.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-white truncate">{res.title}</p>
+                                <p className="text-xs mt-0.5" style={{ color: t.color }}>
+                                  {res.type} · {res.duration}
+                                </p>
+                              </div>
+                              <span className="text-gray-500 text-xs flex-shrink-0">↗</span>
+                            </a>
+                          );
+                        })}
                       </div>
+                    </div>
+                  )}
+
+                  {selectedNode?.mini_project && (
+                    <div className="mb-4 p-3 rounded-xl"
+                      style={{ background: 'rgba(255,179,71,0.08)', border: '1px solid rgba(255,179,71,0.2)' }}>
+                      <p className="text-xs font-bold text-warning mb-1">🔨 Mini Project</p>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        {selectedNode.mini_project}
+                      </p>
                     </div>
                   )}
 
