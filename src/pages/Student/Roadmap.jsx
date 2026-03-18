@@ -35,36 +35,96 @@ const Roadmap = () => {
 
   const fetchRoadmap = async () => {
     setLoading(true);
-
     try {
-      const { data: roadmapData } = await supabase
+      const { data: roadmaps, error: rmError } = await supabase
         .from('roadmaps')
         .select('*')
         .eq('student_id', profile.id)
-        .order('created_at', { ascending: false })
         .limit(1);
 
-      if (roadmapData && roadmapData.length > 0) {
-        setRoadmap(roadmapData[0]);
-        const { data: nodeData } = await supabase
-          .from('roadmap_nodes')
-          .select('*')
-          .eq('roadmap_id', roadmapData[0].id)
-          .order('order_index', { ascending: true });
-        setNodes(nodeData || []);
-      } else {
+      if (rmError) {
+        console.error('Roadmap fetch error:', rmError);
+        setLoading(false);
+        return;
+      }
+
+      if (!roadmaps || roadmaps.length === 0) {
+        // Check if assessment exists for "take assessment" CTA
         const { data: assessData } = await supabase
-          .from('assessments')
-          .select('*')
-          .eq('student_id', profile.id)
-          .order('completed_at', { ascending: false })
-          .limit(1);
+          .from('assessments').select('id').eq('student_id', profile.id).limit(1);
         setAssessment(assessData && assessData.length > 0 ? assessData[0] : null);
+        setNodes([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: nodeData, error: nodeError } = await supabase
+        .from('roadmap_nodes')
+        .select('*')
+        .eq('roadmap_id', roadmaps[0].id)
+        .order('order_index', { ascending: true });
+
+      if (nodeError) {
+        console.error('Nodes fetch error:', nodeError);
+        setLoading(false);
+        return;
+      }
+
+      setRoadmap(roadmaps[0]);
+      setNodes(nodeData || []);
+    } catch (err) {
+      console.error('fetchRoadmap error:', err);
+    }
+    setLoading(false);
+  };
+
+  const generateDefaultRoadmap = async () => {
+    setLoading(true);
+    toast.loading('Generating roadmap...', { id: 'rm' });
+
+    const domain = profile?.domain_id || 'fullstack';
+    const domainNodes = {
+      fullstack: ['HTML & CSS Fundamentals','JavaScript Basics','JavaScript Advanced','React Frontend','Node.js Backend','Databases','REST APIs','Deploy Your App'],
+      dsa: ['Arrays & Strings','Linked Lists','Stacks & Queues','Trees & BST','Graphs BFS/DFS','Dynamic Programming','Sorting Algorithms','Mock Interviews'],
+      aiml: ['Python Basics','Statistics & Math','Pandas & Analysis','ML Fundamentals','Scikit-learn','Deep Learning','NLP Basics','AI Projects'],
+      cybersecurity: ['Networking Basics','Linux CLI','Python Security','Web Security','OWASP Top 10','Penetration Testing','Security Tools','CTF Practice'],
+      devops: ['Linux & Shell','Git & GitHub','Docker','Kubernetes','AWS Core','CI/CD Pipelines','Infrastructure Code','Monitoring'],
+      android: ['Kotlin Basics','Android UI','Jetpack Compose','Navigation','Networking','Firebase','Local Storage','Play Store'],
+    };
+
+    const nodes = domainNodes[domain] || domainNodes['fullstack'];
+
+    try {
+      const { data: roadmap } = await supabase
+        .from('roadmaps')
+        .insert({
+          student_id: profile.id,
+          title: `${domain.charAt(0).toUpperCase() + domain.slice(1)} Roadmap`,
+          domain,
+          status: 'active',
+          total_nodes: nodes.length,
+        })
+        .select().single();
+
+      if (roadmap) {
+        await supabase.from('roadmap_nodes').insert(
+          nodes.map((title, i) => ({
+            roadmap_id: roadmap.id,
+            title,
+            description: `Master ${title}`,
+            order_index: i,
+            status: i === 0 ? 'unlocked' : 'locked',
+            skills: [title],
+            estimated_days: 7,
+          }))
+        );
+        toast.success('Roadmap generated! 🗺️', { id: 'rm' });
+        fetchRoadmap();
       }
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error(err);
+      toast.error('Failed to generate', { id: 'rm' });
     }
-
     setLoading(false);
   };
 
@@ -160,35 +220,31 @@ const Roadmap = () => {
           )}
         </div>
 
-        {/* No Roadmap State */}
-        {!roadmap && (
+        {/* No Roadmap / Empty State */}
+        {(!roadmap || nodes.length === 0) && !loading && (
           <div className="bg-dark-800 border border-dark-600 rounded-2xl p-10 text-center">
             <div className="text-5xl mb-4">🗺️</div>
-            <h2 className="text-xl font-bold text-white font-heading mb-2">
-              Ready for your personalized roadmap?
+            <h2 className="text-lg font-bold text-white font-heading mb-2">
+              No roadmap yet
             </h2>
-            <p className="text-gray-400 text-sm mb-6 max-w-md mx-auto">
-              Based on your assessment, our AI will build a roadmap
-              calibrated exactly to your level and goals.
+            <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
+              Complete your career assessment to generate your personalized roadmap,
+              or quick-generate a default one based on your domain.
             </p>
-            {!assessment ? (
+            <div className="flex gap-3 justify-center flex-wrap">
               <a href="/student/assessment"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-dark-900 font-bold rounded-xl text-sm hover:bg-opacity-90 transition-all">
-                Complete Assessment First
+                Take Assessment →
               </a>
-            ) : (
-              <button onClick={handleGenerate} disabled={generating}
-                className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-dark-900 font-bold rounded-xl text-sm hover:bg-opacity-90 transition-all disabled:opacity-70">
+              <button onClick={generateDefaultRoadmap} disabled={generating || loading}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-dark-700 border border-dark-500 text-white font-bold rounded-xl text-sm hover:border-primary transition-all disabled:opacity-60">
                 {generating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
-                    Building your roadmap...
-                  </>
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating...</>
                 ) : (
-                  <><Zap size={16} /> Generate My Roadmap</>
+                  <>Quick Generate 🚀</>
                 )}
               </button>
-            )}
+            </div>
           </div>
         )}
 

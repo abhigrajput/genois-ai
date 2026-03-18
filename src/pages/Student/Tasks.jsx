@@ -161,37 +161,34 @@ const Tasks = () => {
         .limit(1);
 
       if (!roadmaps || roadmaps.length === 0) {
-        toast.error('Generate your roadmap first!');
+        toast.error('Generate your roadmap first! Go to Roadmap page.');
         setGenerating(false);
         return;
       }
 
-      // Get first unlocked node from student's roadmap
       const { data: nodes } = await supabase
         .from('roadmap_nodes')
         .select('*')
         .eq('roadmap_id', roadmaps[0].id)
-        .eq('status', 'unlocked')
+        .neq('status', 'locked')
+        .order('order_index', { ascending: true })
         .limit(1);
 
       if (!nodes || nodes.length === 0) {
-        // If no unlocked node, get first node
-        const { data: firstNodes } = await supabase
+        const { data: firstNode } = await supabase
           .from('roadmap_nodes')
           .select('*')
           .eq('roadmap_id', roadmaps[0].id)
           .order('order_index', { ascending: true })
           .limit(1);
 
-        if (!firstNodes || firstNodes.length === 0) {
-          toast.error('No roadmap nodes found!');
+        if (!firstNode || firstNode.length === 0) {
+          toast.error('No roadmap nodes found. Please regenerate your roadmap.');
           setGenerating(false);
           return;
         }
 
-        // Use first node
-        const node = firstNodes[0];
-        await createTasksForNode(node);
+        await createTasksForNode(firstNode[0]);
         return;
       }
 

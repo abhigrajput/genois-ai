@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { generateRoadmap } from '../../lib/claude';
 import useStore from '../../store/useStore';
 
 const DOMAINS = [
@@ -69,6 +70,161 @@ const Assessment = () => {
     }));
   };
 
+  const domainMap = {
+    web: 'fullstack', aiml: 'aiml', security: 'cybersecurity',
+    data: 'aiml', mobile: 'android', cloud: 'devops',
+    embedded: 'fullstack', blockchain: 'fullstack',
+  };
+
+  const getDefaultRoadmap = (studentProfile) => {
+    const domain = studentProfile.domain_id || 'fullstack';
+    const roadmaps = {
+      fullstack: {
+        title: 'Full Stack Developer Roadmap',
+        nodes: [
+          { title: 'HTML & CSS Fundamentals', description: 'Build the structure and style of web pages', skills: ['HTML', 'CSS'] },
+          { title: 'JavaScript Basics', description: 'Learn programming fundamentals with JS', skills: ['JavaScript'] },
+          { title: 'JavaScript Advanced', description: 'ES6+, async, promises, closures', skills: ['JavaScript', 'ES6'] },
+          { title: 'React Frontend', description: 'Build interactive UIs with React', skills: ['React', 'JSX'] },
+          { title: 'Node.js Backend', description: 'Server-side JavaScript with Node', skills: ['Node.js', 'Express'] },
+          { title: 'Databases', description: 'SQL and NoSQL databases', skills: ['MongoDB', 'PostgreSQL'] },
+          { title: 'REST APIs', description: 'Build and consume REST APIs', skills: ['API', 'REST'] },
+          { title: 'Deploy Your App', description: 'Deploy to cloud platforms', skills: ['Vercel', 'AWS'] },
+        ],
+      },
+      dsa: {
+        title: 'DSA & Problem Solving Roadmap',
+        nodes: [
+          { title: 'Arrays & Strings', description: 'Foundation of all data structures', skills: ['Arrays'] },
+          { title: 'Linked Lists', description: 'Pointer-based data structures', skills: ['LinkedList'] },
+          { title: 'Stacks & Queues', description: 'Linear data structures', skills: ['Stack', 'Queue'] },
+          { title: 'Trees & Binary Search', description: 'Hierarchical data structures', skills: ['Trees', 'BST'] },
+          { title: 'Graphs & BFS/DFS', description: 'Network traversal algorithms', skills: ['Graphs'] },
+          { title: 'Dynamic Programming', description: 'Optimization with memoization', skills: ['DP'] },
+          { title: 'Sorting Algorithms', description: 'Master all sorting techniques', skills: ['Sorting'] },
+          { title: 'Mock Interviews', description: 'Practice real interview problems', skills: ['Interview'] },
+        ],
+      },
+      aiml: {
+        title: 'AI/ML Engineer Roadmap',
+        nodes: [
+          { title: 'Python for Data Science', description: 'Python basics + data libraries', skills: ['Python'] },
+          { title: 'Statistics & Math', description: 'Probability, linear algebra basics', skills: ['Statistics'] },
+          { title: 'Pandas & Data Analysis', description: 'Data manipulation and analysis', skills: ['Pandas'] },
+          { title: 'Machine Learning Basics', description: 'Supervised and unsupervised learning', skills: ['ML'] },
+          { title: 'Scikit-learn', description: 'Build ML models with sklearn', skills: ['Scikit-learn'] },
+          { title: 'Deep Learning', description: 'Neural networks with PyTorch', skills: ['PyTorch'] },
+          { title: 'NLP Fundamentals', description: 'Natural language processing', skills: ['NLP'] },
+          { title: 'AI Project Portfolio', description: 'Build and deploy AI projects', skills: ['MLOps'] },
+        ],
+      },
+      cybersecurity: {
+        title: 'Cybersecurity Roadmap',
+        nodes: [
+          { title: 'Networking Fundamentals', description: 'TCP/IP, DNS, HTTP basics', skills: ['Networking'] },
+          { title: 'Linux Command Line', description: 'Essential Linux skills', skills: ['Linux'] },
+          { title: 'Python for Security', description: 'Automation and scripting', skills: ['Python'] },
+          { title: 'Web Security Basics', description: 'HTTP, HTTPS, cookies, sessions', skills: ['Web Security'] },
+          { title: 'OWASP Top 10', description: 'Most critical web vulnerabilities', skills: ['OWASP'] },
+          { title: 'Penetration Testing', description: 'Ethical hacking methodology', skills: ['PenTest'] },
+          { title: 'Security Tools', description: 'Burp Suite, Nmap, Wireshark', skills: ['Tools'] },
+          { title: 'CTF Challenges', description: 'Capture the flag competitions', skills: ['CTF'] },
+        ],
+      },
+      devops: {
+        title: 'DevOps Engineer Roadmap',
+        nodes: [
+          { title: 'Linux & Shell Scripting', description: 'Command line mastery', skills: ['Linux'] },
+          { title: 'Git & Version Control', description: 'Code management with Git', skills: ['Git'] },
+          { title: 'Docker & Containers', description: 'Containerize applications', skills: ['Docker'] },
+          { title: 'Kubernetes Basics', description: 'Container orchestration', skills: ['Kubernetes'] },
+          { title: 'AWS Core Services', description: 'EC2, S3, RDS, Lambda', skills: ['AWS'] },
+          { title: 'CI/CD Pipelines', description: 'Automate build and deploy', skills: ['CI/CD'] },
+          { title: 'Infrastructure as Code', description: 'Terraform and Ansible', skills: ['Terraform'] },
+          { title: 'Monitoring & Logging', description: 'Grafana, Prometheus, ELK', skills: ['Monitoring'] },
+        ],
+      },
+      android: {
+        title: 'Android Developer Roadmap',
+        nodes: [
+          { title: 'Kotlin Fundamentals', description: 'Learn Kotlin programming', skills: ['Kotlin'] },
+          { title: 'Android UI Basics', description: 'Views, layouts, XML', skills: ['Android'] },
+          { title: 'Jetpack Compose', description: 'Modern declarative UI', skills: ['Compose'] },
+          { title: 'Activities & Navigation', description: 'App navigation and flow', skills: ['Navigation'] },
+          { title: 'Networking & APIs', description: 'Retrofit, OkHttp', skills: ['Retrofit'] },
+          { title: 'Firebase Integration', description: 'Auth, Firestore, Storage', skills: ['Firebase'] },
+          { title: 'Local Storage', description: 'Room database, SharedPrefs', skills: ['Room'] },
+          { title: 'Publish to Play Store', description: 'Release your first app', skills: ['Play Store'] },
+        ],
+      },
+    };
+    return roadmaps[domain] || roadmaps['fullstack'];
+  };
+
+  const createRoadmap = async (studentProfile) => {
+    try {
+      const { data: oldRoadmaps } = await supabase
+        .from('roadmaps').select('id').eq('student_id', studentProfile.id);
+      if (oldRoadmaps?.length > 0) {
+        const ids = oldRoadmaps.map(r => r.id);
+        await supabase.from('roadmap_nodes').delete().in('roadmap_id', ids);
+        await supabase.from('roadmaps').delete().eq('student_id', studentProfile.id);
+      }
+
+      toast.loading('Generating your roadmap...', { id: 'roadmap' });
+
+      let roadmapData;
+      try {
+        roadmapData = await generateRoadmap(form);
+      } catch (e) {
+        console.error('Claude failed, using default roadmap');
+        roadmapData = getDefaultRoadmap(studentProfile);
+      }
+
+      const { data: roadmap, error: roadmapError } = await supabase
+        .from('roadmaps')
+        .insert({
+          student_id: studentProfile.id,
+          title: roadmapData.title || `${studentProfile.target_role || 'Software Developer'} Roadmap`,
+          domain: studentProfile.domain_id || 'fullstack',
+          status: 'active',
+          total_nodes: roadmapData.nodes?.length || 8,
+        })
+        .select()
+        .single();
+
+      if (roadmapError) {
+        console.error('Roadmap creation error:', roadmapError);
+        toast.error('Failed to create roadmap', { id: 'roadmap' });
+        return;
+      }
+
+      const nodes = roadmapData.nodes || getDefaultRoadmap(studentProfile).nodes;
+      const nodesToInsert = nodes.map((node, i) => ({
+        roadmap_id: roadmap.id,
+        title: node.title || node,
+        description: node.description || `Master ${node.title || node} skills`,
+        order_index: i,
+        status: i === 0 ? 'unlocked' : 'locked',
+        skills: node.skills || [],
+        estimated_days: 7,
+      }));
+
+      const { error: nodesError } = await supabase.from('roadmap_nodes').insert(nodesToInsert);
+      if (nodesError) {
+        console.error('Nodes creation error:', nodesError);
+        toast.error('Failed to create roadmap nodes', { id: 'roadmap' });
+        return;
+      }
+
+      toast.success('Roadmap created! 🗺️', { id: 'roadmap' });
+      return roadmap;
+    } catch (err) {
+      console.error('createRoadmap error:', err);
+      toast.error('Roadmap generation failed', { id: 'roadmap' });
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
@@ -79,9 +235,17 @@ const Assessment = () => {
         target_role: form.target_role,
       });
       if (error) throw error;
-      toast.success('Assessment saved! Generating your roadmap...');
-      setTimeout(() => navigate('/student/roadmap'), 1000);
+
+      const mappedDomain = domainMap[form.domains[0]] || 'fullstack';
+      await createRoadmap({
+        ...profile,
+        domain_id: mappedDomain,
+        target_role: form.target_role,
+      });
+
+      navigate('/student/roadmap');
     } catch (err) {
+      console.error(err);
       toast.error('Something went wrong. Try again.');
     }
     setLoading(false);
