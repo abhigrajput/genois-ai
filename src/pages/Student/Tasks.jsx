@@ -8,6 +8,7 @@ import { generateDailyTasks } from '../../lib/claude';
 import useStore from '../../store/useStore';
 import usePlan from '../../hooks/usePlan';
 import UpgradePrompt from '../../components/ui/UpgradePrompt';
+import { TIMELINES } from '../../data/domains';
 import toast from 'react-hot-toast';
 
 const typeIcon = {
@@ -217,6 +218,10 @@ const Tasks = () => {
     } catch (e) {
       console.log('Using mock tasks');
     }
+
+    // Slice based on timeline
+    const tl = TIMELINES[profile.timeline] || TIMELINES['6months'];
+    tasksToUse = tasksToUse.slice(0, tl.tasksPerDay);
 
     const tasksToInsert = tasksToUse.map(t => ({
       student_id: profile.id,

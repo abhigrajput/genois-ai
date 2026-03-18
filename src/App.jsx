@@ -37,6 +37,7 @@ const AnxietyChat = lazy(() => import('./pages/Student/AnxietyChat'));
 const SkillDNA = lazy(() => import('./pages/Student/SkillDNA'));
 const ScoreHistory = lazy(() => import('./pages/Student/ScoreHistory'));
 const Notes = lazy(() => import('./pages/Student/Notes'));
+const DomainExplorer = lazy(() => import('./pages/DomainExplorer'));
 
 // Company pages
 const CompanyDashboard = lazy(() => import('./pages/Company/Dashboard'));
@@ -134,6 +135,10 @@ function App() {
           <Route path="/student/chat" element={
             <ProtectedRoute role="student"><AnxietyChat /></ProtectedRoute>
           } />
+          <Route path="/student/domains" element={
+            <ProtectedRoute role="student"><DomainExplorer /></ProtectedRoute>
+          } />
+          <Route path="/domains" element={<DomainExplorer />} />
 
           {/* Company */}
           <Route path="/company/dashboard" element={

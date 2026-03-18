@@ -47,6 +47,17 @@ const Navbar = () => {
 
       <div className="flex items-center gap-2">
 
+        {profile?.timeline && (
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-dark-700 border border-dark-500">
+            <span className="text-xs">
+              {profile.timeline === '3months' ? '🔥' : profile.timeline === '6months' ? '⚡' : '🌱'}
+            </span>
+            <span className="text-xs text-gray-400">
+              {profile.timeline === '3months' ? 'Intensive' : profile.timeline === '6months' ? 'Standard' : 'Deep'}
+            </span>
+          </div>
+        )}
+
         {profile && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-500">
             <Zap size={11} style={{ color: getScoreColor(profile.skill_score || 0) }} />

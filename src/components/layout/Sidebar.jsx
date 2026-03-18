@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Map, CheckSquare, FileText,
   Zap, User, FileEdit, BarChart2, Brain,
   MessageCircle, Search, Star, TrendingUp,
-  Users, Shield, X, Menu, Building, BookOpen
+  Users, Shield, X, Menu, Building, BookOpen, Compass
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 
@@ -22,6 +22,7 @@ const studentNav = [
   { icon: TrendingUp,      label: 'Score Intel', path: '/student/score'     },
   { icon: BookOpen,        label: 'Notes',       path: '/student/notes'     },
   { icon: MessageCircle,   label: '2AM Chat',    path: '/student/chat'      },
+  { icon: Compass,         label: 'Domains',     path: '/student/domains'   },
 ];
 
 const companyNav = [
