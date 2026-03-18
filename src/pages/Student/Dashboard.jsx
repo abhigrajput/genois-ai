@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { calculateDetailedScore } from '../../lib/scoring';
 import useStore from '../../store/useStore';
 import usePlan from '../../hooks/usePlan';
+import useStreak from '../../hooks/useStreak';
 import { Link } from 'react-router-dom';
 import DOMAINS, { TIMELINES } from '../../data/domains';
 
@@ -65,6 +66,7 @@ const ScoreTransparencyCard = ({ scoreData }) => {
 const Dashboard = () => {
   const { profile } = useStore();
   const { plan, isFree, color: planColor, label: planLabel } = usePlan();
+  useStreak();
   const [anxiety, setAnxiety] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [todayStats, setTodayStats] = useState({ done: 0, total: 0, minutes: 0 });

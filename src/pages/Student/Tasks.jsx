@@ -33,6 +33,7 @@ const Tasks = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState('today');
+  const [taskNotes, setTaskNotes] = useState([]);
 
   // Pomodoro timer
   const [timerRunning, setTimerRunning] = useState(false);
@@ -96,6 +97,28 @@ const Tasks = () => {
     }
     return () => clearInterval(timerRef.current);
   }, [timerRunning, isBreak]);
+
+  const detectTopicFromTask = (title) => {
+    const t = (title || '').toLowerCase();
+    if (t.includes('react')) return 'React';
+    if (t.includes('node') || t.includes('server')) return 'Node.js';
+    if (t.includes('javascript') || t.includes('js')) return 'JavaScript';
+    if (t.includes('python')) return 'Python';
+    if (t.includes('array') || t.includes('tree') || t.includes('graph') || t.includes('dsa')) return 'DSA';
+    if (t.includes('database') || t.includes('sql')) return 'Database';
+    return 'Web Dev';
+  };
+
+  const fetchTaskNotes = async (task) => {
+    const topic = detectTopicFromTask(task.title);
+    const { data } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('student_id', profile.id)
+      .eq('topic', topic)
+      .limit(2);
+    setTaskNotes(data || []);
+  };
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -392,7 +415,7 @@ const Tasks = () => {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  onClick={() => setSelectedTask(task)}
+                  onClick={() => { setSelectedTask(task); fetchTaskNotes(task); }}
                   className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
                     selectedTask?.id === task.id
                       ? 'border-primary bg-primary/5'
@@ -530,6 +553,20 @@ const Tasks = () => {
                       </button>
                     )}
                   </div>
+                  {taskNotes.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-dark-600">
+                      <p className="text-xs text-gray-500 mb-2">📘 Related Notes</p>
+                      {taskNotes.map((note, i) => (
+                        <a key={i} href="/student/notes"
+                          className="block p-2 rounded-lg bg-dark-700 mb-1.5 hover:bg-dark-600 transition-all">
+                          <p className="text-xs font-medium text-white">{note.title}</p>
+                          <p className="text-xs text-gray-600 truncate">
+                            {note.content?.substring(0, 60)}...
+                          </p>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
