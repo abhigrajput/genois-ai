@@ -126,48 +126,50 @@ Return ONLY this JSON:
 };
 
 export const generateTest = async (nodeTitle, skills) => {
-  const system = `You are an exam question generator for engineering students.
-Generate unique, randomized MCQ questions. Always respond with ONLY valid JSON.`;
+  const system = `You are a technical assessment creator for engineering students in India.
+Generate challenging but fair MCQ and coding questions.
+Questions MUST be specific to the exact topic provided.
+Return ONLY valid JSON. No markdown, no explanation.`;
 
-  const user = `Generate a weekly assessment for: ${nodeTitle}
-Skills: ${skills?.join(', ')}
+  const user = `Generate a weekly technical assessment.
+Topic: ${nodeTitle}
+Domain: ${skills?.join(', ')}
 Week: ${new Date().toISOString().split('T')[0]}
 
-Return ONLY this exact JSON - NO other text:
+IMPORTANT: Questions must be 100% specific to "${nodeTitle}".
+Not generic programming questions.
+Mix of conceptual and practical.
+
+Return ONLY this JSON:
 {
-  "title": "string",
+  "title": "${nodeTitle} — Week Assessment",
   "questions": [
     {
-      "question": "string",
       "type": "mcq",
-      "options": {"A": "string", "B": "string", "C": "string", "D": "string"},
-      "correct_answer": "A|B|C|D",
-      "explanation": "string",
+      "question": "specific question about ${nodeTitle}",
+      "options": {"A": "...", "B": "...", "C": "...", "D": "..."},
+      "correct_answer": "A",
+      "explanation": "why this is correct",
       "difficulty": "easy|medium|hard",
       "marks": 1
-    },
-    {
-      "question": "string",
-      "type": "code",
-      "code_language": "javascript",
-      "code_prompt": "Write a function that [specific task]",
-      "starter_code": "function solution() {\n  // write your code here\n}",
-      "expected_output": "string describing what the code should do",
-      "test_cases": ["input1 → output1", "input2 → output2"],
-      "explanation": "string",
-      "difficulty": "medium|hard",
-      "marks": 2
     }
   ]
 }
 
-Rules:
-- Generate exactly 8 MCQ questions and 2 coding questions (10 total)
-- MCQ questions must be DIFFERENT every week (use current date as seed)
-- Coding questions must be practical mini-challenges
-- Vary difficulty: 3 easy, 4 medium, 3 hard
-- Make questions specific to the skill topic
-- Code questions should be completable in 5-10 minutes`;
+Generate 8 MCQ + 2 coding questions specific to ${nodeTitle}.
+For coding questions use this format:
+{
+  "type": "code",
+  "question": "specific coding challenge about ${nodeTitle}",
+  "code_language": "javascript",
+  "code_prompt": "Write a function that ...",
+  "starter_code": "function solution() {\\n  // write your code here\\n}",
+  "expected_output": "what the code should do",
+  "test_cases": ["input1 → output1", "input2 → output2"],
+  "explanation": "explanation",
+  "difficulty": "medium|hard",
+  "marks": 2
+}`;
 
   const text = await callClaude(system, user, 3000);
   const clean = text.replace(/```json|```/g, '').trim();

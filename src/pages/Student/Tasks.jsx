@@ -186,17 +186,21 @@ const Tasks = () => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Use mock tasks (reliable, no API needed)
-    const mockTasks = [
+    // Use timeline to determine task count
+    const timeline = profile?.timeline || '6months';
+    const tl = TIMELINES[timeline] || TIMELINES['6months'];
+    const tasksCount = tl.tasksPerDay;
+
+    const allPossibleTasks = [
       {
         title: `Study: ${node.title}`,
-        description: `Read and understand the core concepts of ${node.title}. Take notes as you go.`,
+        description: `Read and understand core concepts of ${node.title}. Take notes as you go.`,
         type: 'reading',
         estimated_minutes: 20,
       },
       {
         title: `Practice: ${node.title}`,
-        description: `Write code related to ${node.title}. Experiment and try different approaches.`,
+        description: `Write code related to ${node.title}. Try different approaches.`,
         type: 'coding',
         estimated_minutes: 30,
       },
@@ -206,22 +210,25 @@ const Tasks = () => {
         type: 'project',
         estimated_minutes: 45,
       },
+      {
+        title: `Revise: ${node.title} key concepts`,
+        description: `Review your notes and reinforce understanding. Test yourself.`,
+        type: 'reading',
+        estimated_minutes: 15,
+      },
     ];
+    const mockTasks = allPossibleTasks.slice(0, tasksCount);
 
     // Try Claude API first, fall back to mock
     let tasksToUse = mockTasks;
     try {
       const aiTasks = await generateDailyTasks(node, 'medium');
       if (aiTasks?.tasks?.length > 0) {
-        tasksToUse = aiTasks.tasks;
+        tasksToUse = aiTasks.tasks.slice(0, tasksCount);
       }
     } catch (e) {
       console.log('Using mock tasks');
     }
-
-    // Slice based on timeline
-    const tl = TIMELINES[profile.timeline] || TIMELINES['6months'];
-    tasksToUse = tasksToUse.slice(0, tl.tasksPerDay);
 
     const tasksToInsert = tasksToUse.map(t => ({
       student_id: profile.id,
@@ -311,6 +318,27 @@ const Tasks = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold font-heading text-white">Tasks 📋</h1>
+            {profile?.timeline && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: profile.timeline === '3months'
+                      ? 'rgba(255,107,107,0.15)'
+                      : profile.timeline === '9months'
+                      ? 'rgba(0,255,148,0.15)'
+                      : 'rgba(255,179,71,0.15)',
+                    color: profile.timeline === '3months'
+                      ? '#FF6B6B'
+                      : profile.timeline === '9months'
+                      ? '#00FF94'
+                      : '#FFB347',
+                  }}>
+                  {profile.timeline === '3months' ? '🔥 Intensive: 4 tasks/day'
+                   : profile.timeline === '9months' ? '🌱 Deep: 1 task/day'
+                   : '⚡ Standard: 2 tasks/day'}
+                </span>
+              </div>
+            )}
             <p className="text-gray-500 text-sm mt-1">
               {todayDone}/{todayTotal} done today
             </p>

@@ -8,6 +8,7 @@ import { calculateDetailedScore } from '../../lib/scoring';
 import useStore from '../../store/useStore';
 import usePlan from '../../hooks/usePlan';
 import { Link } from 'react-router-dom';
+import DOMAINS, { TIMELINES } from '../../data/domains';
 
 const ANXIETY_OPTIONS = [
   { id: 'overwhelmed', emoji: '😤', label: 'Overwhelmed' },
@@ -71,6 +72,7 @@ const Dashboard = () => {
   const [greeting, setGreeting] = useState('');
   const [scoreData, setScoreData] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [projectMilestone, setProjectMilestone] = useState(null);
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -98,12 +100,37 @@ const Dashboard = () => {
       .then(setScoreData)
       .catch(() => {});
 
-    // Load projects
+    // Load projects + check milestone
     const { data: projectData } = await supabase
       .from('projects')
       .select('*')
       .eq('student_id', profile.id);
-    setProjects(projectData || []);
+    const projectList = projectData || [];
+    setProjects(projectList);
+
+    const timeline = profile?.timeline || '6months';
+    const tl = TIMELINES[timeline];
+    const startDate = profile?.timeline_start_date
+      ? new Date(profile.timeline_start_date)
+      : new Date();
+    const weeksSinceStart = Math.max(0, Math.floor(
+      (new Date() - startDate) / (1000 * 60 * 60 * 24 * 7)
+    ));
+    const projectsDue = Math.floor(weeksSinceStart / tl.projectFrequencyWeeks);
+    const projectsBuilt = projectList.length;
+
+    const domain = DOMAINS.find(d => d.id === profile?.domain_id);
+    if (projectsDue > projectsBuilt && domain) {
+      const nextProject = domain.projects[projectsBuilt];
+      if (nextProject) {
+        setProjectMilestone({
+          number: projectsBuilt + 1,
+          name: nextProject.name,
+          difficulty: nextProject.difficulty,
+          weeks: nextProject.weeks,
+        });
+      }
+    }
   };
 
   const completeTask = async (taskId) => {
@@ -212,6 +239,29 @@ const Dashboard = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Project Milestone Alert */}
+        {projectMilestone && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-xl border border-warning/30 bg-warning/5 mb-6">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🔨</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-warning font-heading">
+                  Project #{projectMilestone.number} Due!
+                </p>
+                <p className="text-xs text-white mt-0.5">{projectMilestone.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5 capitalize">
+                  {projectMilestone.difficulty} · Build in {projectMilestone.weeks} weeks
+                </p>
+              </div>
+              <a href="/student/profile"
+                className="text-xs font-bold text-warning bg-warning/10 px-3 py-1.5 rounded-lg hover:bg-warning/20 transition-all flex-shrink-0">
+                Add Project →
+              </a>
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-6">
 
@@ -332,38 +382,6 @@ const Dashboard = () => {
 
           </div>
         </div>
-
-        {/* Project Milestone Card */}
-        {projects.length > 0 && (() => {
-          const overdue = projects.filter(p => p.status !== 'completed' && p.due_date && new Date(p.due_date) < new Date());
-          const built = projects.filter(p => p.status === 'completed').length;
-          return (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className={`mb-6 rounded-xl p-4 border ${overdue.length > 0 ? 'border-warning/30 bg-warning/5' : 'border-success/20 bg-success/5'}`}>
-              <div className="flex items-center gap-3">
-                {overdue.length > 0
-                  ? <AlertTriangle size={16} className="text-warning flex-shrink-0" />
-                  : <FolderOpen size={16} className="text-success flex-shrink-0" />
-                }
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-white">
-                    {overdue.length > 0
-                      ? `${overdue.length} project${overdue.length > 1 ? 's' : ''} overdue`
-                      : `${built} project${built !== 1 ? 's' : ''} built`}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {overdue.length > 0
-                      ? overdue.map(p => p.title).join(', ')
-                      : 'Great job staying on track with your project milestones!'}
-                  </p>
-                </div>
-                <a href="/student/roadmap" className="text-xs text-primary hover:underline flex-shrink-0">
-                  View →
-                </a>
-              </div>
-            </motion.div>
-          );
-        })()}
 
         {/* Encouragement Footer */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}

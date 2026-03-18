@@ -32,7 +32,8 @@ const DomainExplorer = () => {
   const saveDomainAndTimeline = async () => {
     if (!selectedDomain || !selectedTimeline) return;
     setSaving(true);
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from('profiles')
       .update({
         domain_id: selectedDomain.id,
@@ -41,12 +42,57 @@ const DomainExplorer = () => {
         target_role: selectedDomain.jobRoles[0],
       })
       .eq('id', profile.id)
-      .select().single();
+      .select()
+      .single();
+
+    if (error) {
+      toast.error('Failed to save: ' + error.message);
+      setSaving(false);
+      return;
+    }
 
     if (data) setProfile(data);
-    toast.success(`${selectedDomain.name} selected! Your personalized plan is ready 🚀`);
+
+    // Delete old roadmap and generate new one for this domain
+    const { data: oldRoadmaps } = await supabase
+      .from('roadmaps')
+      .select('id')
+      .eq('student_id', profile.id);
+
+    if (oldRoadmaps?.length > 0) {
+      const roadmapIds = oldRoadmaps.map(r => r.id);
+      await supabase.from('roadmap_nodes').delete().in('roadmap_id', roadmapIds);
+      await supabase.from('roadmaps').delete().eq('student_id', profile.id);
+    }
+
+    // Create new roadmap for selected domain
+    const { data: newRoadmap } = await supabase
+      .from('roadmaps')
+      .insert({
+        student_id: profile.id,
+        title: `${selectedDomain.name} Roadmap`,
+        domain: selectedDomain.id,
+        status: 'active',
+      })
+      .select()
+      .single();
+
+    if (newRoadmap) {
+      const nodes = selectedDomain.roadmapPreview.map((title, i) => ({
+        roadmap_id: newRoadmap.id,
+        title,
+        description: `Master ${title} as part of your ${selectedDomain.name} journey`,
+        order_index: i,
+        status: i === 0 ? 'unlocked' : 'locked',
+        skills: selectedDomain.skills.slice(0, 3),
+        estimated_days: TIMELINES[selectedTimeline].nodeUnlockDays,
+      }));
+      await supabase.from('roadmap_nodes').insert(nodes);
+    }
+
+    toast.success(`${selectedDomain.name} roadmap generated! 🚀`);
     setSaving(false);
-    navigate('/student/dashboard');
+    navigate('/student/roadmap');
   };
 
   return (

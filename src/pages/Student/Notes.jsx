@@ -141,22 +141,115 @@ const Notes = () => {
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false });
 
-    if (!data || data.length === 0) {
-      await seedStarterNotes();
-    } else {
-      setNotes(data);
+    const notesList = data || [];
+    setNotes(notesList);
+
+    if (notesList.length === 0) {
+      await seedDomainNotes();
     }
     setLoading(false);
   };
 
-  const seedStarterNotes = async () => {
-    const toInsert = STARTER_NOTES.map(n => ({
-      ...n, student_id: profile.id,
-    }));
-    const { data } = await supabase
-      .from('notes').insert(toInsert).select();
-    setNotes(data || []);
-    toast.success('Starter notes added! 📝');
+  const seedDomainNotes = async () => {
+    const domain = profile?.domain_id || 'fullstack';
+
+    const domainStarterNotes = {
+      fullstack: [
+        {
+          title: 'How the Web Works',
+          content: '🧠 Concept: Browser sends HTTP request → Server responds with HTML/CSS/JS → Browser renders the page.\n\n💡 Example: When you type google.com, DNS resolves it to an IP, your browser connects, Google server sends back HTML.\n\n⚡ Use Case: Understanding this helps you debug network issues and build faster apps.\n\n📝 Key Points:\n• HTTP is stateless\n• HTTPS = HTTP + SSL encryption\n• Status codes: 200 OK, 404 Not Found, 500 Server Error\n\n🔥 Remember: Every web request is a question, every response is an answer.',
+          code_snippet: 'fetch("https://api.example.com/data")\n  .then(res => res.json())\n  .then(data => console.log(data))\n  .catch(err => console.error(err));',
+          code_language: 'javascript',
+          topic: 'Web Dev',
+          type: 'code',
+          is_pinned: true,
+        },
+        {
+          title: 'JavaScript: var vs let vs const',
+          content: '🧠 Concept: Three ways to declare variables in JS, each with different scope rules.\n\n💡 Example: var is function-scoped, let/const are block-scoped.\n\n⚡ Use Case: Always use const by default, let when you need to reassign, never var.\n\n📝 Key Points:\n• const = cannot reassign\n• let = can reassign, block-scoped\n• var = function-scoped, avoid it\n\n🔥 Remember: const is not immutable for objects, just the reference.',
+          code_snippet: 'const name = "Abhishek"; // cannot reassign\nlet age = 20; // can reassign\nage = 21; // works\n\nconst user = { name: "Abhi" };\nuser.name = "Abhishek"; // this works!\n// user = {} // throws error',
+          code_language: 'javascript',
+          topic: 'JavaScript',
+          type: 'code',
+          is_pinned: false,
+        },
+      ],
+      dsa: [
+        {
+          title: 'Arrays — The Foundation',
+          content: '🧠 Concept: Array is a collection of elements stored in contiguous memory. Index starts at 0.\n\n💡 Example: Think of it like seats in a cinema hall — each seat has a number (index).\n\n⚡ Use Case: Store lists, iterate over data, solve 70% of coding interview problems.\n\n📝 Key Points:\n• Access: O(1) — super fast\n• Search: O(n) — check each element\n• Insert at end: O(1)\n• Insert at middle: O(n)\n\n🔥 Remember: Two pointer technique solves most array problems.',
+          code_snippet: 'function twoSum(nums, target) {\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (map.has(complement)) return [map.get(complement), i];\n    map.set(nums[i], i);\n  }\n}',
+          code_language: 'javascript',
+          topic: 'DSA',
+          type: 'code',
+          is_pinned: true,
+        },
+        {
+          title: 'Big O Notation',
+          content: '🧠 Concept: Measures algorithm efficiency. O(1) constant, O(n) linear, O(n²) quadratic, O(log n) logarithmic.\n\n💡 Example: Searching sorted array — binary search O(log n) vs linear scan O(n).\n\n⚡ Use Case: Always aim for O(n) or better. Avoid O(n²) in large inputs.\n\n📝 Key Points:\n• O(1): hash lookup, array access\n• O(log n): binary search\n• O(n): single loop\n• O(n²): nested loops\n\n🔥 Remember: Drop constants and lower-order terms.',
+          code_snippet: null,
+          code_language: 'javascript',
+          topic: 'Algorithms',
+          type: 'theory',
+          is_pinned: false,
+        },
+      ],
+      aiml: [
+        {
+          title: 'What is Machine Learning?',
+          content: '🧠 Concept: ML is teaching computers to learn patterns from data without being explicitly programmed.\n\n💡 Example: Show 1000 cat photos → model learns what makes a cat → can identify new cat photos.\n\n⚡ Use Case: Spam detection, recommendation systems, image recognition, price prediction.\n\n📝 Key Points:\n• Supervised: labeled data (input + output)\n• Unsupervised: find patterns in unlabeled data\n• Reinforcement: learn by reward/punishment\n\n🔥 Remember: Garbage in = Garbage out. Data quality is everything.',
+          code_snippet: 'from sklearn.linear_model import LinearRegression\nimport numpy as np\n\nX = np.array([[1], [2], [3], [4]])\ny = np.array([2, 4, 6, 8])\n\nmodel = LinearRegression()\nmodel.fit(X, y)\nprint(model.predict([[5]]))',
+          code_language: 'python',
+          topic: 'Other',
+          type: 'code',
+          is_pinned: true,
+        },
+      ],
+      cybersecurity: [
+        {
+          title: 'OWASP Top 10 — Must Know',
+          content: '🧠 Concept: OWASP Top 10 is the most critical web security vulnerabilities list.\n\n💡 Example: SQL Injection — attacker puts SQL code in a form field to steal database.\n\n⚡ Use Case: Every web developer must know these to build secure apps.\n\n📝 Key Points:\n• #1 Broken Access Control\n• #2 Cryptographic Failures\n• #3 Injection (SQL, NoSQL, Command)\n• #7 XSS — Cross Site Scripting\n\n🔥 Remember: Never trust user input. Always sanitize and validate.',
+          code_snippet: '// VULNERABLE\nconst query = `SELECT * FROM users WHERE email = "${email}"`;\n\n// SAFE — Parameterized query\nconst query = "SELECT * FROM users WHERE email = ?";\ndb.execute(query, [email]);',
+          code_language: 'javascript',
+          topic: 'Web Dev',
+          type: 'code',
+          is_pinned: true,
+        },
+      ],
+      devops: [
+        {
+          title: 'Docker in 5 Minutes',
+          content: '🧠 Concept: Docker packages your app + dependencies into a container that runs the same everywhere.\n\n💡 Example: "Works on my machine" problem solved. Container runs same on laptop, server, cloud.\n\n⚡ Use Case: Deploy apps consistently, scale easily, isolate services.\n\n📝 Key Points:\n• Image = blueprint (like a class)\n• Container = running instance (like an object)\n• Dockerfile = instructions to build image\n• docker-compose = run multiple containers\n\n🔥 Remember: Containers are ephemeral — don\'t store data inside them.',
+          code_snippet: '# Dockerfile\nFROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]',
+          code_language: 'bash',
+          topic: 'Other',
+          type: 'code',
+          is_pinned: true,
+        },
+      ],
+      android: [
+        {
+          title: 'Kotlin Basics — Android First Steps',
+          content: '🧠 Concept: Kotlin is the official language for Android development. Concise, safe, interoperable with Java.\n\n💡 Example: Null safety prevents the most common Android crash — NullPointerException.\n\n⚡ Use Case: Build Android apps, use coroutines for async operations.\n\n📝 Key Points:\n• val = immutable, var = mutable\n• ? makes a type nullable\n• ?: is the elvis operator\n• data class auto-generates equals/hashCode\n\n🔥 Remember: Kotlin = Java but better. Less code, fewer bugs.',
+          code_snippet: 'data class User(\n  val name: String,\n  val age: Int,\n  val email: String? = null\n)\n\nfun greet(user: User) {\n  val email = user.email ?: "No email provided"\n  println("Hello ${user.name}! Email: $email")\n}',
+          code_language: 'javascript',
+          topic: 'Other',
+          type: 'code',
+          is_pinned: true,
+        },
+      ],
+    };
+
+    const notesToSeed = domainStarterNotes[domain] || domainStarterNotes['fullstack'];
+
+    const { data, error } = await supabase.from('notes').insert(
+      notesToSeed.map(note => ({ ...note, student_id: profile.id }))
+    ).select();
+
+    if (!error) {
+      setNotes(data || []);
+      toast.success('Domain notes added! 📝');
+    }
   };
 
   const filtered = notes.filter(n => {
