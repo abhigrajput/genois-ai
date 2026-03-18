@@ -104,6 +104,8 @@ const Notes = () => {
   const [noteType, setNoteType] = useState('theory');
   const [editNote, setEditNote] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [generatingTemplate, setGeneratingTemplate] = useState(false);
+  const [currentNode, setCurrentNode] = useState(null);
   const [form, setForm] = useState({
     title: '', content: '', use_case: '',
     code_snippet: '', code_language: 'javascript',
@@ -113,6 +115,23 @@ const Notes = () => {
   useEffect(() => {
     if (profile?.id) fetchNotes();
   }, [profile]);
+
+  useEffect(() => {
+    if (profile?.id) fetchCurrentNode();
+  }, [profile]);
+
+  const fetchCurrentNode = async () => {
+    const { data: roadmaps } = await supabase
+      .from('roadmaps').select('id')
+      .eq('student_id', profile.id).limit(1);
+    if (!roadmaps?.length) return;
+    const { data: nodes } = await supabase
+      .from('roadmap_nodes').select('*')
+      .eq('roadmap_id', roadmaps[0].id)
+      .eq('status', 'unlocked')
+      .limit(1);
+    if (nodes?.length) setCurrentNode(nodes[0]);
+  };
 
   const fetchNotes = async () => {
     setLoading(true);
@@ -148,7 +167,20 @@ const Notes = () => {
     return matchTopic && matchSearch;
   });
 
-  const openCreate = (type) => {
+  const detectTopic = (nodeTitle) => {
+    if (!nodeTitle) return 'Other';
+    const title = nodeTitle.toLowerCase();
+    if (title.includes('react') || title.includes('frontend')) return 'React';
+    if (title.includes('node') || title.includes('backend') || title.includes('server')) return 'Node.js';
+    if (title.includes('javascript') || title.includes('js')) return 'JavaScript';
+    if (title.includes('python')) return 'Python';
+    if (title.includes('database') || title.includes('sql') || title.includes('mongo')) return 'Database';
+    if (title.includes('dsa') || title.includes('algorithm') || title.includes('array') || title.includes('tree')) return 'DSA';
+    if (title.includes('system') || title.includes('design')) return 'System Design';
+    return 'Web Dev';
+  };
+
+  const openCreate = (type = 'theory') => {
     setNoteType(type);
     setEditNote(null);
     setForm({
@@ -157,9 +189,84 @@ const Notes = () => {
         ? 'function solution() {\n  // write here\n}'
         : '',
       code_language: 'javascript',
-      topic: 'JavaScript', is_pinned: false,
+      topic: type === 'theory' && currentNode
+        ? detectTopic(currentNode.title)
+        : 'JavaScript',
+      is_pinned: false,
     });
     setCreating(true);
+  };
+
+  const generateAINoteTemplate = async (topic, nodeTitle) => {
+    setGeneratingTemplate(true);
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: `Generate a micro study note template for an engineering student.
+Topic: ${topic}
+Domain/Node: ${nodeTitle || topic}
+
+Return ONLY this exact format, no extra text:
+TITLE: [specific concept title]
+CONTENT:
+🧠 Concept: [2-3 line simple explanation]
+
+💡 Real Example: [one practical real world example]
+
+⚡ Use Case: [when to use this]
+
+📝 Key Points:
+- [point 1]
+- [point 2]
+- [point 3]
+
+🔥 Remember: [one line memory tip]
+
+CODE:
+[relevant code snippet - 5-10 lines max]
+LANGUAGE: [javascript/python/java/cpp]`,
+          }],
+        }),
+      });
+      const data = await response.json();
+      const text = data.content?.[0]?.text || '';
+
+      const titleMatch   = text.match(/TITLE:\s*(.+)/);
+      const contentMatch = text.match(/CONTENT:\n([\s\S]*?)(?=CODE:|$)/);
+      const codeMatch    = text.match(/CODE:\n([\s\S]*?)(?=LANGUAGE:|$)/);
+      const langMatch    = text.match(/LANGUAGE:\s*(.+)/);
+
+      setForm(f => ({
+        ...f,
+        title:         titleMatch?.[1]?.trim()   || `${topic} — Key Concepts`,
+        content:       contentMatch?.[1]?.trim() || '',
+        code_snippet:  codeMatch?.[1]?.trim()    || '',
+        code_language: langMatch?.[1]?.trim()    || 'javascript',
+        topic,
+      }));
+      if (codeMatch?.[1]?.trim()) setNoteType('code');
+      toast.success('AI note template generated! ✨');
+    } catch {
+      toast.error('Failed to generate template');
+      setForm(f => ({
+        ...f,
+        title: `${topic} — Key Concepts`,
+        content: `🧠 Concept: Write what you learned about ${topic}\n\n💡 Real Example: Add a real example here\n\n⚡ Use Case: When would you use this?\n\n📝 Key Points:\n• Point 1\n• Point 2\n• Point 3\n\n🔥 Remember: Add your memory tip`,
+        topic,
+      }));
+    }
+    setGeneratingTemplate(false);
   };
 
   const openEdit = (note) => {
@@ -420,8 +527,42 @@ const Notes = () => {
                   <input value={form.title}
                     onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                     placeholder={noteType === 'theory' ? 'e.g. What is a closure?' : 'e.g. Reverse a string'}
-                    className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary transition-colors mb-2 font-medium"
+                    className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary transition-colors mb-3 font-medium"
                   />
+
+                  {/* AI Template Generator */}
+                  <div className="mb-3 p-3 rounded-xl"
+                    style={{ background: 'rgba(0,255,148,0.05)', border: '1px solid rgba(0,255,148,0.15)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-primary">✨ AI Generate Template</span>
+                      {currentNode && (
+                        <span className="text-xs text-gray-600 truncate ml-2 max-w-[110px]">
+                          {currentNode.title.substring(0, 20)}...
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <select value={form.topic}
+                        onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
+                        className="flex-1 bg-dark-700 border border-dark-500 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none">
+                        {TOPICS.slice(1).map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <button onClick={() => generateAINoteTemplate(form.topic, currentNode?.title)}
+                        disabled={generatingTemplate}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                        style={{ background: 'rgba(0,255,148,0.15)', color: '#00FF94', border: '1px solid rgba(0,255,148,0.3)' }}>
+                        {generatingTemplate
+                          ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          : '✨'}
+                        {generatingTemplate ? 'Generating...' : 'Generate'}
+                      </button>
+                    </div>
+                    {currentNode && (
+                      <p className="text-xs text-gray-600 mt-1.5">
+                        From roadmap: <span className="text-gray-400">{currentNode.title}</span>
+                      </p>
+                    )}
+                  </div>
 
                   {noteType === 'theory' ? (
                     <>

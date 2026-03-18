@@ -334,7 +334,7 @@ const Tasks = () => {
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="flex flex-col md:flex-row gap-4">
 
           {/* Task List */}
           <div className="flex flex-col gap-3">

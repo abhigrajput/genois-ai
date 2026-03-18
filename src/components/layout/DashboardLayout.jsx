@@ -11,7 +11,7 @@ const DashboardLayout = ({ children }) => {
       <Navbar />
       <Sidebar />
       <main className="md:ml-52 pt-14 pb-20 md:pb-0 min-h-screen">
-        <div className="p-5 md:p-6">
+        <div className="p-3 md:p-6">
           {children}
         </div>
       </main>
