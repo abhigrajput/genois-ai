@@ -99,7 +99,7 @@ const Tests = () => {
     if (!nodeIds.length) return;
 
     const { data: testData } = await supabase
-      .from('tests').select('*, roadmap_nodes(title, skills)')
+      .from('tests').select('*')
       .in('node_id', nodeIds)
       .order('created_at', { ascending: false });
 

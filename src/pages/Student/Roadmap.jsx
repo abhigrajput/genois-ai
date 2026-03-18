@@ -83,16 +83,117 @@ const Roadmap = () => {
     toast.loading('Generating roadmap...', { id: 'rm' });
 
     const domain = profile?.domain_id || 'fullstack';
-    const domainNodes = {
-      fullstack: ['HTML & CSS Fundamentals','JavaScript Basics','JavaScript Advanced','React Frontend','Node.js Backend','Databases','REST APIs','Deploy Your App'],
-      dsa: ['Arrays & Strings','Linked Lists','Stacks & Queues','Trees & BST','Graphs BFS/DFS','Dynamic Programming','Sorting Algorithms','Mock Interviews'],
-      aiml: ['Python Basics','Statistics & Math','Pandas & Analysis','ML Fundamentals','Scikit-learn','Deep Learning','NLP Basics','AI Projects'],
-      cybersecurity: ['Networking Basics','Linux CLI','Python Security','Web Security','OWASP Top 10','Penetration Testing','Security Tools','CTF Practice'],
-      devops: ['Linux & Shell','Git & GitHub','Docker','Kubernetes','AWS Core','CI/CD Pipelines','Infrastructure Code','Monitoring'],
-      android: ['Kotlin Basics','Android UI','Jetpack Compose','Navigation','Networking','Firebase','Local Storage','Play Store'],
-    };
 
-    const nodes = domainNodes[domain] || domainNodes['fullstack'];
+    const nodesWithResources = [
+      {
+        title: 'HTML & CSS Fundamentals',
+        description: 'Build web page structure and styling',
+        skills: ['HTML5', 'CSS3', 'Flexbox'],
+        resources: [
+          { title: 'HTML Full Course - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=pQN-pnXPaVg', type: 'video', duration: '2 hours' },
+          { title: 'CSS Full Course - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=OXGznpKZ_sA', type: 'video', duration: '2 hours' },
+          { title: 'MDN HTML Docs', url: 'https://developer.mozilla.org/en-US/docs/Learn/HTML', type: 'docs', duration: '1 hour' },
+          { title: 'CSS Flexbox Froggy Practice', url: 'https://flexboxfroggy.com', type: 'practice', duration: '1 hour' },
+        ],
+        mini_project: 'Build a personal portfolio page with HTML and CSS',
+      },
+      {
+        title: 'JavaScript Fundamentals',
+        description: 'Learn variables, functions, DOM manipulation',
+        skills: ['JavaScript', 'DOM', 'ES6'],
+        resources: [
+          { title: 'JavaScript Full Course - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=PkZNo7MFNFg', type: 'video', duration: '3 hours' },
+          { title: 'JavaScript.info Modern Tutorial', url: 'https://javascript.info', type: 'article', duration: '4 hours' },
+          { title: 'JavaScript 30 Projects - Wes Bos', url: 'https://javascript30.com', type: 'practice', duration: '10 hours' },
+          { title: 'JS DOM Manipulation - Traversy YouTube', url: 'https://www.youtube.com/watch?v=0ik6X4DJKCc', type: 'video', duration: '1 hour' },
+        ],
+        mini_project: 'Build an interactive To-Do list with localStorage',
+      },
+      {
+        title: 'JavaScript Advanced',
+        description: 'Closures, promises, async/await, ES6+',
+        skills: ['Promises', 'Async/Await', 'Closures'],
+        resources: [
+          { title: 'Async JavaScript - Traversy YouTube', url: 'https://www.youtube.com/watch?v=PoRJizFvM7s', type: 'video', duration: '1 hour' },
+          { title: 'JavaScript: The Hard Parts - YouTube', url: 'https://www.youtube.com/watch?v=aAIqVrcYim4', type: 'video', duration: '2 hours' },
+          { title: 'ES6 Guide - GeeksForGeeks', url: 'https://www.geeksforgeeks.org/introduction-to-es6/', type: 'article', duration: '2 hours' },
+          { title: 'Async Await - javascript.info', url: 'https://javascript.info/async-await', type: 'practice', duration: '1 hour' },
+        ],
+        mini_project: 'Build a weather app using fetch API',
+      },
+      {
+        title: 'React Frontend',
+        description: 'Build UIs with React hooks and components',
+        skills: ['React', 'Hooks', 'State Management'],
+        resources: [
+          { title: 'React Full Course 2024 - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=CgkZ7MvWUAA', type: 'video', duration: '4 hours' },
+          { title: 'React Official Docs - react.dev', url: 'https://react.dev/learn', type: 'docs', duration: '3 hours' },
+          { title: 'React Hooks - Codevolution YouTube', url: 'https://www.youtube.com/watch?v=cF2lQ_gZeA8', type: 'video', duration: '2 hours' },
+          { title: 'Build 5 React Projects YouTube', url: 'https://www.youtube.com/watch?v=a_7Z7C_JCyo', type: 'practice', duration: '5 hours' },
+        ],
+        mini_project: 'Build a GitHub profile finder with React',
+      },
+      {
+        title: 'Node.js & Express Backend',
+        description: 'Build REST APIs with Node.js and Express',
+        skills: ['Node.js', 'Express', 'REST API'],
+        resources: [
+          { title: 'Node.js Crash Course - Traversy YouTube', url: 'https://www.youtube.com/watch?v=fBNz5xF-Kx4', type: 'video', duration: '1.5 hours' },
+          { title: 'Express.js Crash Course YouTube', url: 'https://www.youtube.com/watch?v=SccSCuHhOw0', type: 'video', duration: '1 hour' },
+          { title: 'REST API with Node - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=l8WPWK9mS5M', type: 'video', duration: '2 hours' },
+          { title: 'Node.js Official Docs', url: 'https://nodejs.org/en/docs', type: 'docs', duration: '2 hours' },
+        ],
+        mini_project: 'Build a REST API for notes with CRUD operations',
+      },
+      {
+        title: 'Databases - SQL & MongoDB',
+        description: 'Master PostgreSQL and MongoDB for data storage',
+        skills: ['PostgreSQL', 'MongoDB', 'SQL'],
+        resources: [
+          { title: 'SQL Full Course - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=HXV3zeQKqGY', type: 'video', duration: '4 hours' },
+          { title: 'MongoDB Crash Course - Traversy YouTube', url: 'https://www.youtube.com/watch?v=-56x56UppqQ', type: 'video', duration: '1.5 hours' },
+          { title: 'SQL Practice - HackerRank', url: 'https://www.hackerrank.com/domains/sql', type: 'practice', duration: '5 hours' },
+          { title: 'PostgreSQL Tutorial', url: 'https://www.postgresqltutorial.com', type: 'docs', duration: '2 hours' },
+        ],
+        mini_project: 'Build a student management system with PostgreSQL',
+      },
+      {
+        title: 'Authentication & Security',
+        description: 'JWT auth, OAuth, and web security basics',
+        skills: ['JWT', 'OAuth', 'Security'],
+        resources: [
+          { title: 'JWT Auth Tutorial - Traversy YouTube', url: 'https://www.youtube.com/watch?v=mbsmsi7l3r4', type: 'video', duration: '1 hour' },
+          { title: 'Node Auth - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=Ud5xKCYQTjM', type: 'video', duration: '2 hours' },
+          { title: 'OWASP Top 10 Guide', url: 'https://owasp.org/www-project-top-ten/', type: 'article', duration: '1 hour' },
+          { title: 'Web Security - web.dev', url: 'https://web.dev/secure/', type: 'docs', duration: '1 hour' },
+        ],
+        mini_project: 'Add JWT login/register to your REST API',
+      },
+      {
+        title: 'Deploy Full Stack App',
+        description: 'Deploy frontend + backend + database to cloud',
+        skills: ['Vercel', 'Railway', 'Docker'],
+        resources: [
+          { title: 'Deploy Node.js - Railway YouTube', url: 'https://www.youtube.com/watch?v=MusIvEKjqsc', type: 'video', duration: '30 min' },
+          { title: 'Vercel Deployment Docs', url: 'https://vercel.com/docs', type: 'docs', duration: '1 hour' },
+          { title: 'Docker for Beginners - freeCodeCamp YouTube', url: 'https://www.youtube.com/watch?v=fqMOX6JJhGo', type: 'video', duration: '2 hours' },
+          { title: 'GitHub Actions Tutorial YouTube', url: 'https://www.youtube.com/watch?v=R8_veQiYBjI', type: 'video', duration: '1 hour' },
+        ],
+        mini_project: 'Deploy your full stack app with custom domain',
+      },
+    ];
+
+    const nodesToInsert = nodesWithResources.map((node, i) => ({
+      roadmap_id: null, // filled after roadmap created
+      title: node.title,
+      description: node.description,
+      order_index: i,
+      status: i === 0 ? 'unlocked' : 'locked',
+      skills: node.skills,
+      resources: node.resources,
+      mini_project: node.mini_project,
+      estimated_days: 7,
+    }));
 
     try {
       const { data: roadmap } = await supabase
@@ -102,21 +203,13 @@ const Roadmap = () => {
           title: `${domain.charAt(0).toUpperCase() + domain.slice(1)} Roadmap`,
           domain,
           status: 'active',
-          total_nodes: nodes.length,
+          total_nodes: nodesToInsert.length,
         })
         .select().single();
 
       if (roadmap) {
         await supabase.from('roadmap_nodes').insert(
-          nodes.map((title, i) => ({
-            roadmap_id: roadmap.id,
-            title,
-            description: `Master ${title}`,
-            order_index: i,
-            status: i === 0 ? 'unlocked' : 'locked',
-            skills: [title],
-            estimated_days: 7,
-          }))
+          nodesToInsert.map(n => ({ ...n, roadmap_id: roadmap.id }))
         );
         toast.success('Roadmap generated! 🗺️', { id: 'rm' });
         fetchRoadmap();

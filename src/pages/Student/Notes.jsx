@@ -153,102 +153,120 @@ const Notes = () => {
   const seedDomainNotes = async () => {
     const domain = profile?.domain_id || 'fullstack';
 
-    const domainStarterNotes = {
+    const domainNotes = {
       fullstack: [
         {
           title: 'How the Web Works',
-          content: '🧠 Concept: Browser sends HTTP request → Server responds with HTML/CSS/JS → Browser renders the page.\n\n💡 Example: When you type google.com, DNS resolves it to an IP, your browser connects, Google server sends back HTML.\n\n⚡ Use Case: Understanding this helps you debug network issues and build faster apps.\n\n📝 Key Points:\n• HTTP is stateless\n• HTTPS = HTTP + SSL encryption\n• Status codes: 200 OK, 404 Not Found, 500 Server Error\n\n🔥 Remember: Every web request is a question, every response is an answer.',
-          code_snippet: 'fetch("https://api.example.com/data")\n  .then(res => res.json())\n  .then(data => console.log(data))\n  .catch(err => console.error(err));',
+          content: '🧠 Concept:\nWhen you type a URL, your browser sends an HTTP request to a server. The server responds with HTML, CSS, and JavaScript. Your browser renders it into a webpage.\n\n💡 Real Example:\nYou type "google.com" → DNS finds IP address → Browser connects → Google server sends HTML → Browser shows the page\n\n⚡ Use Case:\nUnderstanding this helps you debug network issues, optimize performance, and build faster apps.\n\n📝 Key Points:\n• HTTP = stateless protocol\n• HTTPS = HTTP + SSL encryption\n• Status codes: 200 OK, 404 Not Found, 500 Server Error\n• Request = question, Response = answer\n\n🔥 Remember:\n"Every web page is just a conversation between browser and server"',
+          code_snippet: '// Making a web request in JavaScript\nfetch("https://api.example.com/users")\n  .then(response => response.json())\n  .then(data => {\n    console.log(data);\n  })\n  .catch(error => {\n    console.error("Error:", error);\n  });\n\n// Modern way with async/await\nconst getData = async () => {\n  try {\n    const response = await fetch("https://api.example.com/users");\n    const data = await response.json();\n    console.log(data);\n  } catch (error) {\n    console.error("Error:", error);\n  }\n};',
           code_language: 'javascript',
           topic: 'Web Dev',
-          type: 'code',
           is_pinned: true,
         },
         {
           title: 'JavaScript: var vs let vs const',
-          content: '🧠 Concept: Three ways to declare variables in JS, each with different scope rules.\n\n💡 Example: var is function-scoped, let/const are block-scoped.\n\n⚡ Use Case: Always use const by default, let when you need to reassign, never var.\n\n📝 Key Points:\n• const = cannot reassign\n• let = can reassign, block-scoped\n• var = function-scoped, avoid it\n\n🔥 Remember: const is not immutable for objects, just the reference.',
-          code_snippet: 'const name = "Abhishek"; // cannot reassign\nlet age = 20; // can reassign\nage = 21; // works\n\nconst user = { name: "Abhi" };\nuser.name = "Abhishek"; // this works!\n// user = {} // throws error',
+          content: '🧠 Concept:\nThree ways to declare variables in JS. Each has different rules about scope and reassignment.\n\n💡 Real Example:\nconst for things that never change (API URL)\nlet for things that change (counter, loop variable)\nvar = avoid it completely\n\n⚡ Use Case:\nUse const by default. Switch to let only when you need to reassign. Never use var.\n\n📝 Key Points:\n• const = cannot reassign the variable\n• let = can reassign, block-scoped\n• var = function-scoped, hoisted, avoid it\n• const object properties CAN be changed\n\n🔥 Remember:\n"const is not immutable — it just locks the reference"',
+          code_snippet: '// const - cannot reassign\nconst API_URL = "https://api.example.com";\n// API_URL = "other"; // ERROR!\n\n// let - can reassign\nlet score = 0;\nscore = 10; // OK\n\n// Tricky: const object\nconst user = { name: "Abhishek" };\nuser.name = "Abhi"; // This WORKS!\n// user = {}; // This FAILS\n\n// Block scope example\nif (true) {\n  let blockVar = "inside";\n  var leaky = "I escape!";\n}\n// console.log(blockVar); // ERROR\nconsole.log(leaky); // Works - bad!',
           code_language: 'javascript',
           topic: 'JavaScript',
-          type: 'code',
+          is_pinned: false,
+        },
+        {
+          title: 'React Hooks: useState Explained',
+          content: '🧠 Concept:\nuseState lets React components remember values between renders. Without it, variables reset every time component re-renders.\n\n💡 Real Example:\nA counter that increases when you click a button needs useState to remember the count.\n\n⚡ Use Case:\nForm inputs, toggles, counters, loading states, any data that changes in the UI.\n\n📝 Key Points:\n• useState returns [value, setter]\n• Calling setter triggers re-render\n• Never mutate state directly\n• useState is async - old value in same render\n\n🔥 Remember:\n"React re-renders when state changes. setState does not update immediately."',
+          code_snippet: 'import { useState } from "react";\n\nfunction Counter() {\n  const [count, setCount] = useState(0);\n\n  return (\n    <div>\n      <p>Count: {count}</p>\n      <button onClick={() => setCount(count + 1)}>+1</button>\n      <button onClick={() => setCount(0)}>Reset</button>\n    </div>\n  );\n}\n\n// Object state\nfunction Form() {\n  const [form, setForm] = useState({ name: "", email: "" });\n\n  const handleChange = (e) => {\n    setForm(prev => ({\n      ...prev,\n      [e.target.name]: e.target.value\n    }));\n  };\n}',
+          code_language: 'javascript',
+          topic: 'React',
+          is_pinned: false,
+        },
+        {
+          title: 'REST API: CRUD Operations',
+          content: '🧠 Concept:\nREST API uses HTTP methods to Create, Read, Update, Delete data. Every backend you build will use these 4 operations.\n\n💡 Real Example:\nA todo app:\nGET /todos - get all todos\nPOST /todos - create new todo\nPUT /todos/1 - update todo #1\nDELETE /todos/1 - delete todo #1\n\n⚡ Use Case:\nEvery web app needs an API. Frontend talks to backend through REST APIs.\n\n📝 Key Points:\n• GET = Read (no body)\n• POST = Create (has body)\n• PUT/PATCH = Update\n• DELETE = Remove\n• Always send JSON Content-Type header\n\n🔥 Remember:\n"REST is just conventions for HTTP. Any URL structure can be REST."',
+          code_snippet: 'const express = require("express");\nconst app = express();\napp.use(express.json());\n\nlet todos = [];\n\n// GET - Read all\napp.get("/todos", (req, res) => res.json(todos));\n\n// POST - Create\napp.post("/todos", (req, res) => {\n  const todo = { id: Date.now(), ...req.body };\n  todos.push(todo);\n  res.status(201).json(todo);\n});\n\n// DELETE - Remove\napp.delete("/todos/:id", (req, res) => {\n  todos = todos.filter(t => t.id !== parseInt(req.params.id));\n  res.json({ message: "Deleted" });\n});\n\napp.listen(3000);',
+          code_language: 'javascript',
+          topic: 'Node.js',
           is_pinned: false,
         },
       ],
       dsa: [
         {
-          title: 'Arrays — The Foundation',
-          content: '🧠 Concept: Array is a collection of elements stored in contiguous memory. Index starts at 0.\n\n💡 Example: Think of it like seats in a cinema hall — each seat has a number (index).\n\n⚡ Use Case: Store lists, iterate over data, solve 70% of coding interview problems.\n\n📝 Key Points:\n• Access: O(1) — super fast\n• Search: O(n) — check each element\n• Insert at end: O(1)\n• Insert at middle: O(n)\n\n🔥 Remember: Two pointer technique solves most array problems.',
-          code_snippet: 'function twoSum(nums, target) {\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (map.has(complement)) return [map.get(complement), i];\n    map.set(nums[i], i);\n  }\n}',
+          title: 'Arrays: Two Pointer Technique',
+          content: '🧠 Concept:\nTwo pointer technique uses two indices moving through an array. Reduces O(n²) solutions to O(n). Used in 30% of array interview problems.\n\n💡 Real Example:\nFind if two numbers in sorted array sum to target.\nInstead of checking every pair (n²), use left and right pointers.\n\n⚡ Use Case:\nSorted array problems, finding pairs, palindrome check, removing duplicates.\n\n📝 Key Points:\n• Works best on SORTED arrays\n• Left pointer starts at 0\n• Right pointer starts at end\n• Move based on comparison with target\n• O(n) time, O(1) space\n\n🔥 Remember:\n"When you see sorted array + find pair/triplet = think Two Pointer"',
+          code_snippet: 'function twoSum(arr, target) {\n  let left = 0;\n  let right = arr.length - 1;\n\n  while (left < right) {\n    const sum = arr[left] + arr[right];\n    if (sum === target) return [left, right];\n    else if (sum < target) left++;\n    else right--;\n  }\n  return [-1, -1];\n}\n\nconsole.log(twoSum([1, 3, 5, 7, 9], 8)); // [1, 2]\n\n// Palindrome check\nfunction isPalindrome(str) {\n  let left = 0, right = str.length - 1;\n  while (left < right) {\n    if (str[left] !== str[right]) return false;\n    left++; right--;\n  }\n  return true;\n}',
           code_language: 'javascript',
           topic: 'DSA',
-          type: 'code',
           is_pinned: true,
         },
         {
-          title: 'Big O Notation',
-          content: '🧠 Concept: Measures algorithm efficiency. O(1) constant, O(n) linear, O(n²) quadratic, O(log n) logarithmic.\n\n💡 Example: Searching sorted array — binary search O(log n) vs linear scan O(n).\n\n⚡ Use Case: Always aim for O(n) or better. Avoid O(n²) in large inputs.\n\n📝 Key Points:\n• O(1): hash lookup, array access\n• O(log n): binary search\n• O(n): single loop\n• O(n²): nested loops\n\n🔥 Remember: Drop constants and lower-order terms.',
-          code_snippet: null,
+          title: 'Binary Search: Template',
+          content: '🧠 Concept:\nBinary search halves the search space each iteration. O(log n) instead of O(n). Only works on SORTED data.\n\n💡 Real Example:\nFinding a word in a dictionary. You open the middle, see if word comes before or after, eliminate half.\n\n⚡ Use Case:\nSearch in sorted array, find minimum/maximum, rotated array problems.\n\n📝 Key Points:\n• Array must be sorted\n• mid = left + (right-left)/2 (prevents overflow)\n• 3 cases: found, go left, go right\n• Template: while(left <= right)\n• O(log n) time complexity\n\n🔥 Remember:\n"Binary search is not just for finding elements — it is for finding the boundary of a condition"',
+          code_snippet: 'function binarySearch(arr, target) {\n  let left = 0;\n  let right = arr.length - 1;\n\n  while (left <= right) {\n    const mid = left + Math.floor((right - left) / 2);\n\n    if (arr[mid] === target) return mid;\n    else if (arr[mid] < target) left = mid + 1;\n    else right = mid - 1;\n  }\n  return -1;\n}\n\nconst sorted = [1, 3, 5, 7, 9, 11, 13];\nconsole.log(binarySearch(sorted, 7));  // 3\nconsole.log(binarySearch(sorted, 6));  // -1',
           code_language: 'javascript',
-          topic: 'Algorithms',
-          type: 'theory',
-          is_pinned: false,
+          topic: 'DSA',
+          is_pinned: true,
         },
       ],
       aiml: [
         {
-          title: 'What is Machine Learning?',
-          content: '🧠 Concept: ML is teaching computers to learn patterns from data without being explicitly programmed.\n\n💡 Example: Show 1000 cat photos → model learns what makes a cat → can identify new cat photos.\n\n⚡ Use Case: Spam detection, recommendation systems, image recognition, price prediction.\n\n📝 Key Points:\n• Supervised: labeled data (input + output)\n• Unsupervised: find patterns in unlabeled data\n• Reinforcement: learn by reward/punishment\n\n🔥 Remember: Garbage in = Garbage out. Data quality is everything.',
-          code_snippet: 'from sklearn.linear_model import LinearRegression\nimport numpy as np\n\nX = np.array([[1], [2], [3], [4]])\ny = np.array([2, 4, 6, 8])\n\nmodel = LinearRegression()\nmodel.fit(X, y)\nprint(model.predict([[5]]))',
+          title: 'Linear Regression: The Foundation',
+          content: '🧠 Concept:\nLinear regression finds the best line through data points to predict future values. It is the hello world of machine learning.\n\n💡 Real Example:\nPredict house price based on size. More square feet = higher price. Linear regression finds this relationship.\n\n⚡ Use Case:\nPrice prediction, trend analysis, forecasting, any continuous value prediction.\n\n📝 Key Points:\n• y = mx + b (line equation)\n• m = slope (how much y changes per x)\n• b = y-intercept\n• Loss function = Mean Squared Error\n• Gradient descent minimizes loss\n\n🔥 Remember:\n"All of ML is finding the right function. Linear regression finds a straight line."',
+          code_snippet: '# Linear Regression with scikit-learn\nimport numpy as np\nfrom sklearn.linear_model import LinearRegression\n\n# Training data: house size vs price\nX = np.array([[500], [750], [1000], [1250], [1500]])\ny = np.array([50, 75, 100, 125, 150])  # price in lakhs\n\n# Create and train model\nmodel = LinearRegression()\nmodel.fit(X, y)\n\n# Predict\nnew_house = np.array([[1100]])\nprediction = model.predict(new_house)\nprint(f"Predicted price: {prediction[0]:.1f} lakhs")\nprint(f"R2 Score: {model.score(X, y):.4f}")',
           code_language: 'python',
           topic: 'Other',
-          type: 'code',
           is_pinned: true,
         },
       ],
       cybersecurity: [
         {
-          title: 'OWASP Top 10 — Must Know',
-          content: '🧠 Concept: OWASP Top 10 is the most critical web security vulnerabilities list.\n\n💡 Example: SQL Injection — attacker puts SQL code in a form field to steal database.\n\n⚡ Use Case: Every web developer must know these to build secure apps.\n\n📝 Key Points:\n• #1 Broken Access Control\n• #2 Cryptographic Failures\n• #3 Injection (SQL, NoSQL, Command)\n• #7 XSS — Cross Site Scripting\n\n🔥 Remember: Never trust user input. Always sanitize and validate.',
-          code_snippet: '// VULNERABLE\nconst query = `SELECT * FROM users WHERE email = "${email}"`;\n\n// SAFE — Parameterized query\nconst query = "SELECT * FROM users WHERE email = ?";\ndb.execute(query, [email]);',
+          title: 'SQL Injection: Attack & Defense',
+          content: '🧠 Concept:\nSQL injection happens when user input is directly put into a SQL query. Attacker can steal, modify, or delete your entire database.\n\n💡 Real Example:\nLogin form: password = x OR 1=1\nQuery becomes: WHERE password=x OR 1=1\n1=1 is always true → attacker logs in without password!\n\n⚡ Use Case:\nEvery web app with a database is vulnerable if not protected.\n\n📝 Key Points:\n• Never concatenate user input into SQL\n• Always use parameterized queries\n• Validate and sanitize all inputs\n• Use ORM (Prisma, Sequelize)\n• Test with: apostrophe in inputs\n\n🔥 Remember:\n"Never trust user input. Treat all user data as malicious."',
+          code_snippet: '// VULNERABLE - Never do this!\nconst query = `SELECT * FROM users WHERE username = "${username}"`;\n\n// SAFE - Parameterized query (Node.js + pg)\nconst query = "SELECT * FROM users WHERE username = $1";\nconst result = await db.query(query, [username]);\n\n// SAFE - Using Prisma ORM\nconst user = await prisma.user.findUnique({\n  where: { username: username } // Auto-escaped\n});\n\n// Testing for SQLi - try these in any input:\n// 1. Single quote: \'\n// 2. OR 1=1\n// If you see errors or weird behavior = vulnerable!',
           code_language: 'javascript',
           topic: 'Web Dev',
-          type: 'code',
           is_pinned: true,
         },
       ],
       devops: [
         {
-          title: 'Docker in 5 Minutes',
-          content: '🧠 Concept: Docker packages your app + dependencies into a container that runs the same everywhere.\n\n💡 Example: "Works on my machine" problem solved. Container runs same on laptop, server, cloud.\n\n⚡ Use Case: Deploy apps consistently, scale easily, isolate services.\n\n📝 Key Points:\n• Image = blueprint (like a class)\n• Container = running instance (like an object)\n• Dockerfile = instructions to build image\n• docker-compose = run multiple containers\n\n🔥 Remember: Containers are ephemeral — don\'t store data inside them.',
-          code_snippet: '# Dockerfile\nFROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]',
+          title: 'Docker: Containers Explained',
+          content: '🧠 Concept:\nDocker packages your app + all dependencies into a container. Runs the same on any machine. Solves "works on my machine" problem forever.\n\n💡 Real Example:\nYour app needs Node 18 + MongoDB 6. With Docker, anyone can run your app with one command — no installation needed.\n\n⚡ Use Case:\nDeploy consistently, scale microservices, isolate environments, CI/CD pipelines.\n\n📝 Key Points:\n• Image = blueprint (like a class)\n• Container = running instance (like an object)\n• Dockerfile = instructions to build image\n• docker-compose = run multiple containers\n• Containers are ephemeral — data lost on stop!\n\n🔥 Remember:\n"Docker image is a recipe. Container is the cooked food."',
+          code_snippet: '# Dockerfile for a Node.js app\nFROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install --production\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]\n\n# Build and run:\n# docker build -t my-app .\n# docker run -p 3000:3000 my-app\n\n# docker-compose.yml\n# version: "3"\n# services:\n#   app:\n#     build: .\n#     ports: ["3000:3000"]\n#   db:\n#     image: mongo:6',
           code_language: 'bash',
           topic: 'Other',
-          type: 'code',
           is_pinned: true,
         },
       ],
       android: [
         {
-          title: 'Kotlin Basics — Android First Steps',
-          content: '🧠 Concept: Kotlin is the official language for Android development. Concise, safe, interoperable with Java.\n\n💡 Example: Null safety prevents the most common Android crash — NullPointerException.\n\n⚡ Use Case: Build Android apps, use coroutines for async operations.\n\n📝 Key Points:\n• val = immutable, var = mutable\n• ? makes a type nullable\n• ?: is the elvis operator\n• data class auto-generates equals/hashCode\n\n🔥 Remember: Kotlin = Java but better. Less code, fewer bugs.',
-          code_snippet: 'data class User(\n  val name: String,\n  val age: Int,\n  val email: String? = null\n)\n\nfun greet(user: User) {\n  val email = user.email ?: "No email provided"\n  println("Hello ${user.name}! Email: $email")\n}',
+          title: 'Kotlin: Null Safety Explained',
+          content: '🧠 Concept:\nKotlin prevents NullPointerException (the most common Android crash) at compile time. You must explicitly declare if a variable can be null.\n\n💡 Real Example:\nIn Java: String name = null; name.length(); → CRASH!\nIn Kotlin: you must use String? to allow null, and handle it before using.\n\n⚡ Use Case:\nEvery Kotlin variable. This is Kotlin\'s killer feature over Java.\n\n📝 Key Points:\n• String = never null (compiler enforced)\n• String? = can be null\n• !! = force unwrap (crash if null, avoid)\n• ?: = elvis operator (default if null)\n• ?. = safe call (skip if null)\n\n🔥 Remember:\n"? means optional. !! means danger. ?: means default."',
+          code_snippet: '// Non-null variable\nval name: String = "Abhishek"\n\n// Nullable variable\nvar nickname: String? = null\nnickname = "Abhi"\n\n// Safe call operator ?.\nval length = nickname?.length // null if nickname is null\n\n// Elvis operator ?:\nval displayName = nickname ?: "Anonymous"\nprintln(displayName) // "Anonymous" if null\n\n// Let - run only if not null\nnickname?.let { name ->\n    println("Hello, $name!")\n}\n\n// Smart cast after null check\nif (nickname != null) {\n    println(nickname.length) // Smart cast to String\n}',
           code_language: 'javascript',
           topic: 'Other',
-          type: 'code',
           is_pinned: true,
         },
       ],
     };
 
-    const notesToSeed = domainStarterNotes[domain] || domainStarterNotes['fullstack'];
+    const notesToSeed = domainNotes[domain] || domainNotes['fullstack'];
 
-    const { data, error } = await supabase.from('notes').insert(
-      notesToSeed.map(note => ({ ...note, student_id: profile.id }))
-    ).select();
+    const { error } = await supabase.from('notes').insert(
+      notesToSeed.map(note => ({
+        title: note.title,
+        content: note.content,
+        code_snippet: note.code_snippet || null,
+        code_language: note.code_language || 'javascript',
+        topic: note.topic || 'Other',
+        is_pinned: note.is_pinned || false,
+        student_id: profile.id,
+      }))
+    );
 
     if (!error) {
-      setNotes(data || []);
-      toast.success('Domain notes added! 📝');
+      toast.success('Study notes added! 📝');
+      fetchNotes();
+    } else {
+      console.error('Notes seed error:', error);
     }
   };
 
@@ -383,19 +401,28 @@ LANGUAGE: [javascript/python/java/cpp]`,
       return;
     }
     setSaving(true);
-    const payload = {
-      ...form,
-      type: noteType,
-      student_id: profile.id,
-      updated_at: new Date().toISOString(),
-    };
 
     if (editNote) {
-      await supabase.from('notes')
-        .update(payload).eq('id', editNote.id);
+      await supabase.from('notes').update({
+        title: form.title,
+        content: form.content,
+        code_snippet: form.code_snippet || null,
+        code_language: form.code_language || 'javascript',
+        topic: form.topic || 'Other',
+        is_pinned: form.is_pinned || false,
+        updated_at: new Date().toISOString(),
+      }).eq('id', editNote.id);
       toast.success('Updated ✅');
     } else {
-      await supabase.from('notes').insert(payload);
+      await supabase.from('notes').insert({
+        title: form.title,
+        content: form.content,
+        code_snippet: form.code_snippet || null,
+        code_language: form.code_language || 'javascript',
+        topic: form.topic || 'Other',
+        is_pinned: form.is_pinned || false,
+        student_id: profile.id,
+      });
       toast.success('Note saved! 📝');
     }
 
