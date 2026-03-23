@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import useStore from '../store/useStore';
+import { initializeTrial } from '../lib/trial';
 
 const useAuth = () => {
   const { setUser, setProfile, setLoading } = useStore();
@@ -49,6 +50,7 @@ const useAuth = () => {
           })
           .select();
         setProfile(newProfile ? newProfile[0] : null);
+        await initializeTrial(userId, supabase);
       }
     } catch (err) {
       console.error('Profile error:', err);

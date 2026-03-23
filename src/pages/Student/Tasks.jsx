@@ -128,150 +128,128 @@ const Tasks = () => {
         .from('tasks')
         .select('*')
         .eq('student_id', profile.id)
-        .order('id', { ascending: true });
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Tasks fetch error:', error);
-        setTasks([]);
-      } else {
+      if (error) { console.error(error); setTasks([]); }
+      else {
         if (activeTab === 'today') {
           const today = new Date().toISOString().split('T')[0];
-          const todayTasks = (data || []).filter(t =>
-            t.due_date === today
-          );
-          setTasks(todayTasks);
+          setTasks((data || []).filter(t => t.due_date === today));
         } else {
           setTasks(data || []);
         }
       }
-    } catch (err) {
-      console.error(err);
-      setTasks([]);
-    }
+    } catch (err) { setTasks([]); }
     setLoading(false);
   };
 
   const handleGenerateTasks = async () => {
     setGenerating(true);
     try {
-      // First get student's roadmap
-      const { data: roadmaps } = await supabase
-        .from('roadmaps')
-        .select('id')
-        .eq('student_id', profile.id)
-        .limit(1);
+      const today = new Date().toISOString().split('T')[0];
 
-      if (!roadmaps || roadmaps.length === 0) {
-        toast.error('Generate your roadmap first! Go to Roadmap page.');
+      const { data: existingTasks } = await supabase
+        .from('tasks').select('id')
+        .eq('student_id', profile.id)
+        .eq('due_date', today);
+
+      if (existingTasks && existingTasks.length > 0) {
+        toast.success('Tasks already generated for today!');
+        setGenerating(false);
+        return;
+      }
+
+      const { data: roadmaps } = await supabase
+        .from('roadmaps').select('id')
+        .eq('student_id', profile.id).limit(1);
+
+      if (!roadmaps?.length) {
+        toast.error('Generate your roadmap first!');
         setGenerating(false);
         return;
       }
 
       const { data: nodes } = await supabase
-        .from('roadmap_nodes')
-        .select('*')
+        .from('roadmap_nodes').select('*')
         .eq('roadmap_id', roadmaps[0].id)
         .neq('status', 'locked')
         .order('order_index', { ascending: true })
         .limit(1);
 
-      if (!nodes || nodes.length === 0) {
-        const { data: firstNode } = await supabase
-          .from('roadmap_nodes')
-          .select('*')
+      let node = nodes?.[0];
+
+      if (!node) {
+        const { data: firstNodes } = await supabase
+          .from('roadmap_nodes').select('*')
           .eq('roadmap_id', roadmaps[0].id)
           .order('order_index', { ascending: true })
           .limit(1);
+        node = firstNodes?.[0];
+      }
 
-        if (!firstNode || firstNode.length === 0) {
-          toast.error('No roadmap nodes found. Please regenerate your roadmap.');
-          setGenerating(false);
-          return;
-        }
-
-        await createTasksForNode(firstNode[0]);
+      if (!node) {
+        toast.error('No roadmap nodes found. Generate roadmap first!');
+        setGenerating(false);
         return;
       }
 
-      await createTasksForNode(nodes[0]);
+      const timeline = profile?.timeline || '6months';
+      const timelineConfig = { '3months': 4, '6months': 2, '9months': 1 };
+      const taskCount = timelineConfig[timeline] || 2;
 
+      const { data: recentTests } = await supabase
+        .from('test_attempts').select('percentage')
+        .eq('student_id', profile.id)
+        .order('attempted_at', { ascending: false }).limit(3);
+
+      const avgScore = recentTests?.length > 0
+        ? recentTests.reduce((a, t) => a + (t.percentage || 0), 0) / recentTests.length
+        : 70;
+
+      const difficulty = avgScore < 50 ? 'easy' : avgScore > 75 ? 'hard' : 'medium';
+
+      toast.loading('Generating tasks...', { id: 'tasks' });
+
+      let aiTasks = [];
+      try {
+        const result = await generateDailyTasks(node, difficulty);
+        aiTasks = result.tasks || [];
+      } catch { aiTasks = []; }
+
+      const defaultTasks = [
+        { title: `Study: ${node.title}`, description: `Read about ${node.title}`, type: 'reading', estimated_minutes: 20 },
+        { title: `Code: Practice ${node.title}`, description: `Write code for ${node.title}`, type: 'coding', estimated_minutes: 30 },
+        { title: `Build: ${node.title} project`, description: `Build something with ${node.title}`, type: 'practice', estimated_minutes: 45 },
+        { title: `Revise: ${node.title} concepts`, description: `Review what you learned`, type: 'reading', estimated_minutes: 15 },
+      ];
+
+      const tasksToUse = aiTasks.length > 0 ? aiTasks : defaultTasks;
+      const finalTasks = tasksToUse.slice(0, taskCount);
+
+      const { error } = await supabase.from('tasks').insert(
+        finalTasks.map(t => ({
+          student_id: profile.id,
+          node_id: node.id,
+          title: t.title,
+          description: t.description,
+          type: t.type || 'coding',
+          estimated_minutes: t.estimated_minutes || 25,
+          status: 'pending',
+          due_date: today,
+          created_at: new Date().toISOString(),
+        }))
+      );
+
+      if (error) {
+        toast.error('Failed: ' + error.message, { id: 'tasks' });
+      } else {
+        toast.success(`${finalTasks.length} tasks ready! 🎯`, { id: 'tasks' });
+        fetchTasks();
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to generate tasks');
     }
-    setGenerating(false);
-  };
-
-  const createTasksForNode = async (node) => {
-    toast.loading('Generating your tasks...', { id: 'tasks' });
-
-    const today = new Date().toISOString().split('T')[0];
-
-    // Use timeline to determine task count
-    const timeline = profile?.timeline || '6months';
-    const tl = TIMELINES[timeline] || TIMELINES['6months'];
-    const tasksCount = tl.tasksPerDay;
-
-    const allPossibleTasks = [
-      {
-        title: `Study: ${node.title}`,
-        description: `Read and understand core concepts of ${node.title}. Take notes as you go.`,
-        type: 'reading',
-        estimated_minutes: 20,
-      },
-      {
-        title: `Practice: ${node.title}`,
-        description: `Write code related to ${node.title}. Try different approaches.`,
-        type: 'coding',
-        estimated_minutes: 30,
-      },
-      {
-        title: `Build: Mini project using ${node.title}`,
-        description: `Apply what you learned by building something small but working.`,
-        type: 'project',
-        estimated_minutes: 45,
-      },
-      {
-        title: `Revise: ${node.title} key concepts`,
-        description: `Review your notes and reinforce understanding. Test yourself.`,
-        type: 'reading',
-        estimated_minutes: 15,
-      },
-    ];
-    const mockTasks = allPossibleTasks.slice(0, tasksCount);
-
-    // Try Claude API first, fall back to mock
-    let tasksToUse = mockTasks;
-    try {
-      const aiTasks = await generateDailyTasks(node, 'medium');
-      if (aiTasks?.tasks?.length > 0) {
-        tasksToUse = aiTasks.tasks.slice(0, tasksCount);
-      }
-    } catch (e) {
-      console.log('Using mock tasks');
-    }
-
-    const tasksToInsert = tasksToUse.map(t => ({
-      student_id: profile.id,
-      node_id: node.id,
-      title: t.title,
-      description: t.description,
-      type: t.type || 'coding',
-      estimated_minutes: t.estimated_minutes || 25,
-      status: 'pending',
-      due_date: today,
-    }));
-
-    const { error } = await supabase.from('tasks').insert(tasksToInsert);
-
-    if (error) {
-      console.error('Insert error:', error);
-      toast.error('Failed to save tasks: ' + error.message, { id: 'tasks' });
-      return;
-    }
-
-    toast.success("3 tasks ready for today! 🎯", { id: 'tasks' });
-    fetchTasks();
     setGenerating(false);
   };
 

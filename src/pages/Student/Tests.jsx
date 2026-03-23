@@ -114,14 +114,15 @@ const Tests = () => {
     setAttempts(data || []);
   };
 
-  const generateNewTest = async () => {
+  const generateNewTest = async (testType = 'daily') => {
     setGenerating(true);
     try {
       const { data: roadmaps } = await supabase
         .from('roadmaps').select('id')
         .eq('student_id', profile.id).limit(1);
+
       if (!roadmaps?.length) {
-        toast.error('Complete your roadmap first!');
+        toast.error('Generate roadmap first!');
         setGenerating(false);
         return;
       }
@@ -129,50 +130,60 @@ const Tests = () => {
       const { data: nodes } = await supabase
         .from('roadmap_nodes').select('*')
         .eq('roadmap_id', roadmaps[0].id)
-        .in('status', ['unlocked', 'completed'])
+        .neq('status', 'locked')
         .order('order_index', { ascending: true })
         .limit(1);
 
       if (!nodes?.length) {
-        toast.error('Unlock a roadmap node first!');
+        toast.error('No unlocked nodes found!');
         setGenerating(false);
         return;
       }
 
       const node = nodes[0];
-      const currentWeek = getWeekNumber();
-      toast.loading(`Generating Week ${currentWeek} test...`, { id: 'gentest' });
+      const currentWeek = Math.ceil(new Date().getDate() / 7);
+      const today = new Date().toISOString().split('T')[0];
+
+      const title = testType === 'weekly'
+        ? `${node.title} — Week ${currentWeek} Test`
+        : `${node.title} — Daily Test (${today})`;
+
+      toast.loading(`Generating ${testType} test...`, { id: 'gentest' });
+
+      const numQuestions = testType === 'weekly' ? 10 : 5;
 
       let testData;
       try {
-        testData = await generateTest(node.title, node.skills || []);
+        testData = await generateTest(node.title, node.skills || [], numQuestions);
       } catch {
         testData = {
-          title: `${node.title} — Week ${currentWeek} Assessment`,
+          title,
           questions: [
-            { type: 'mcq', question: `What is the primary purpose of ${node.title}?`, options: { A: 'Option A', B: 'Option B', C: 'Option C', D: 'Option D' }, correct_answer: 'A', explanation: 'Understanding core concepts is fundamental.', difficulty: 'easy', marks: 1 },
-            { type: 'mcq', question: 'Which of the following is a best practice in software development?', options: { A: 'Write messy code', B: 'Never test code', C: 'Write clean readable code', D: 'Avoid documentation' }, correct_answer: 'C', explanation: 'Clean code is maintainable and professional.', difficulty: 'easy', marks: 1 },
-            { type: 'mcq', question: 'What does DRY stand for?', options: { A: "Don't Repeat Yourself", B: 'Do Repeat Yourself', C: 'Dynamic Runtime Yield', D: 'Default Rendering Yes' }, correct_answer: 'A', explanation: 'DRY is a core software development principle.', difficulty: 'medium', marks: 1 },
-            { type: 'mcq', question: 'Which data structure uses LIFO order?', options: { A: 'Queue', B: 'Stack', C: 'Array', D: 'Linked List' }, correct_answer: 'B', explanation: 'Stack uses Last In First Out.', difficulty: 'medium', marks: 1 },
-            { type: 'mcq', question: 'What is time complexity of binary search?', options: { A: 'O(n)', B: 'O(n²)', C: 'O(log n)', D: 'O(1)' }, correct_answer: 'C', explanation: 'Binary search halves search space each step.', difficulty: 'medium', marks: 1 },
-            { type: 'mcq', question: 'Which HTTP method creates a new resource?', options: { A: 'GET', B: 'DELETE', C: 'PUT', D: 'POST' }, correct_answer: 'D', explanation: 'POST creates new resources in REST.', difficulty: 'medium', marks: 1 },
-            { type: 'mcq', question: 'What is a JavaScript closure?', options: { A: 'Closing browser tabs', B: 'Function accessing outer scope', C: 'A CSS property', D: 'Database connection' }, correct_answer: 'B', explanation: 'Closures access outer scope variables.', difficulty: 'hard', marks: 1 },
-            { type: 'mcq', question: 'Which is NOT a JavaScript framework?', options: { A: 'React', B: 'Vue', C: 'Django', D: 'Angular' }, correct_answer: 'C', explanation: 'Django is a Python framework.', difficulty: 'easy', marks: 1 },
-            { type: 'code', question: 'Write a function that reverses a string', code_language: 'javascript', code_prompt: 'Write a function reverseString(str) that takes a string and returns it reversed.', starter_code: 'function reverseString(str) {\n  // Write your code here\n  \n}', expected_output: 'reverseString("hello") should return "olleh"', test_cases: ['"hello" → "olleh"', '"world" → "dlrow"'], explanation: 'reverseString("hello") → "olleh"', difficulty: 'easy', marks: 2 },
-            { type: 'code', question: 'Write a function to check if a number is prime', code_language: 'javascript', code_prompt: 'Write a function isPrime(n) that returns true if n is prime, false otherwise.', starter_code: 'function isPrime(n) {\n  // Write your code here\n  \n}', expected_output: 'isPrime(7) returns true, isPrime(4) returns false', test_cases: ['isPrime(7) → true', 'isPrime(4) → false', 'isPrime(1) → false'], explanation: 'Check divisibility up to √n.', difficulty: 'medium', marks: 2 },
+            { type: 'mcq', question: `What is ${node.title}?`, options: { A: 'Correct answer', B: 'Wrong', C: 'Wrong', D: 'Wrong' }, correct_answer: 'A', explanation: 'Core concept.', difficulty: 'easy', marks: 1 },
+            { type: 'mcq', question: 'What does DRY stand for?', options: { A: "Don't Repeat Yourself", B: 'Do Repeat', C: 'Dynamic Runtime', D: 'Default Render' }, correct_answer: 'A', explanation: 'DRY principle.', difficulty: 'easy', marks: 1 },
+            { type: 'mcq', question: 'Best error handling practice?', options: { A: 'Ignore', B: 'try-catch', C: 'Crash', D: 'Delete' }, correct_answer: 'B', explanation: 'try-catch is best.', difficulty: 'medium', marks: 1 },
+            { type: 'mcq', question: 'Time complexity of binary search?', options: { A: 'O(n)', B: 'O(n²)', C: 'O(log n)', D: 'O(1)' }, correct_answer: 'C', explanation: 'Binary search halves each time.', difficulty: 'medium', marks: 1 },
+            { type: 'mcq', question: 'Which HTTP method creates resource?', options: { A: 'GET', B: 'DELETE', C: 'PUT', D: 'POST' }, correct_answer: 'D', explanation: 'POST creates new resources.', difficulty: 'medium', marks: 1 },
+            ...(testType === 'weekly' ? [
+              { type: 'mcq', question: 'What is a closure?', options: { A: 'Browser close', B: 'Function accessing outer scope', C: 'CSS property', D: 'DB term' }, correct_answer: 'B', explanation: 'Closures access outer scope.', difficulty: 'hard', marks: 1 },
+              { type: 'mcq', question: 'What is event loop?', options: { A: 'CSS animation', B: 'Async callback mechanism', C: 'DB query', D: 'React hook' }, correct_answer: 'B', explanation: 'Event loop handles async.', difficulty: 'hard', marks: 1 },
+              { type: 'mcq', question: 'REST vs GraphQL?', options: { A: 'Same thing', B: 'GraphQL fetches exact data needed', C: 'REST is better always', D: 'GraphQL is only for mobile' }, correct_answer: 'B', explanation: 'GraphQL reduces over-fetching.', difficulty: 'hard', marks: 1 },
+              { type: 'code', question: 'Write a function to reverse a string', code_language: 'javascript', starter_code: 'function reverseString(str) {\n  // your code\n}', expected_output: 'reverseString("hello") === "olleh"', explanation: 'String reversal test.', difficulty: 'medium', marks: 2 },
+              { type: 'code', question: 'Write a function to check if number is prime', code_language: 'javascript', starter_code: 'function isPrime(n) {\n  // your code\n}', expected_output: 'isPrime(7) === true', explanation: 'Prime number check.', difficulty: 'medium', marks: 2 },
+            ] : []),
           ]
         };
       }
 
-      const { data: testRow } = await supabase
-        .from('tests').insert({
-          node_id: node.id,
-          title: testData.title,
-          total_marks: testData.questions.reduce((a, q) => a + (q.marks || 1), 0),
-          passing_marks: Math.ceil(testData.questions.length * 0.6),
-          time_limit_minutes: 20,
-          week_number: currentWeek,
-        }).select().single();
+      const { data: testRow } = await supabase.from('tests').insert({
+        node_id: node.id,
+        title,
+        total_marks: testData.questions.reduce((a, q) => a + (q.marks || 1), 0),
+        passing_marks: Math.ceil(testData.questions.length * 0.6),
+        time_limit_minutes: testType === 'weekly' ? 20 : 10,
+        week_number: currentWeek,
+        created_at: new Date().toISOString(),
+      }).select().single();
 
       if (testRow) {
         await supabase.from('test_questions').insert(
@@ -186,7 +197,7 @@ const Tests = () => {
             marks: q.marks || 1,
           }))
         );
-        toast.success(`Week ${currentWeek} test ready! 🎯`, { id: 'gentest' });
+        toast.success(`${testType === 'weekly' ? 'Weekly' : 'Daily'} test ready!`, { id: 'gentest' });
         fetchTests();
       }
     } catch (err) {
@@ -281,14 +292,18 @@ const Tests = () => {
                   Week {getWeekNumber()} · {attempts.filter(a => a.passed).length} passed
                 </p>
               </div>
-              <button onClick={generateNewTest} disabled={generating}
-                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-dark-900 font-bold rounded-xl text-sm hover:bg-opacity-90 transition-all disabled:opacity-50">
-                {generating
-                  ? <div className="w-4 h-4 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
-                  : <Zap size={14} />
-                }
-                Generate Week {getWeekNumber()} Test
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => generateNewTest('daily')} disabled={generating}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-primary text-dark-900 disabled:opacity-50">
+                  {generating ? <div className="w-3 h-3 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" /> : '⚡'}
+                  Daily Test
+                </button>
+                <button onClick={() => generateNewTest('weekly')} disabled={generating}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold disabled:opacity-50"
+                  style={{ background: 'rgba(123,97,255,0.15)', color: '#7B61FF', border: '1px solid rgba(123,97,255,0.3)' }}>
+                  📅 Weekly Test
+                </button>
+              </div>
             </div>
 
             {/* Weekly info banner */}

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, Zap, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { initiatePayment } from '../lib/razorpay';
 import useStore from '../store/useStore';
 import toast from 'react-hot-toast';
 
@@ -101,28 +102,33 @@ const FAQ = [
 
 const Pricing = () => {
   const { profile } = useStore();
-  const [joining, setJoining] = useState(null);
-  const [joined, setJoined] = useState({});
+  const navigate = useNavigate();
+  const [paying, setPaying] = useState(null);
 
-  const handleJoinWaitlist = async (planKey) => {
-    if (!profile?.id) {
-      toast.error('Please log in first');
+  const handlePay = async (planKey) => {
+    if (planKey === 'free') {
+      navigate(profile ? '/app' : '/register');
       return;
     }
-    setJoining(planKey);
-    try {
-      await supabase.from('waitlist').upsert({
-        student_id: profile.id,
-        email: profile.email || profile.id,
-        requested_plan: planKey,
-        feature_requested: 'plan_upgrade',
-      }, { onConflict: 'student_id,requested_plan' });
-      setJoined(prev => ({ ...prev, [planKey]: true }));
-      toast.success(`You're on the ${planKey} waitlist! 🎉`);
-    } catch {
-      toast.error('Something went wrong. Try again.');
+    if (!profile) {
+      navigate('/login');
+      return;
     }
-    setJoining(null);
+    setPaying(planKey);
+    await initiatePayment({
+      plan: planKey,
+      profile,
+      supabase,
+      onSuccess: (response) => {
+        toast.success(`${planKey} plan activated! Payment ID: ${response.razorpay_payment_id}`);
+        setPaying(null);
+        window.location.reload();
+      },
+      onFailure: (reason) => {
+        if (reason !== 'dismissed') toast.error('Payment failed. Try again.');
+        setPaying(null);
+      },
+    });
   };
 
   const currentPlan = profile?.plan || 'free';
@@ -172,8 +178,7 @@ const Pricing = () => {
         <div className="grid md:grid-cols-4 gap-4 mb-16">
           {PLANS.map((plan, i) => {
             const isCurrentPlan = currentPlan === plan.key;
-            const hasJoined = joined[plan.key];
-            const isLoading = joining === plan.key;
+            const isLoading = paying === plan.key;
 
             return (
               <motion.div key={plan.key}
@@ -227,19 +232,19 @@ const Pricing = () => {
 
                 {plan.price === 0 ? (
                   <Link to={profile ? '/app' : '/register'}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all bg-dark-700 border border-dark-500 text-gray-300 hover:border-gray-400">
-                    {profile ? 'Continue Free' : 'Get Started Free'}
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all block"
+                    style={{ background: `${plan.color}15`, color: plan.color, border: `1px solid ${plan.color}30` }}>
+                    Start Free →
                   </Link>
-                ) : hasJoined ? (
-                  <div className="w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-success/10 text-success border border-success/20">
-                    ✓ On waitlist!
-                  </div>
                 ) : (
-                  <button onClick={() => handleJoinWaitlist(plan.key)}
-                    disabled={isLoading}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  <button onClick={() => handlePay(plan.key)}
+                    disabled={isLoading || isCurrentPlan}
+                    className="w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     style={{ background: plan.color, color: '#0A0A0F' }}>
-                    {isLoading ? 'Joining...' : 'Join Waitlist'}
+                    {isLoading
+                      ? <div className="w-4 h-4 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
+                      : isCurrentPlan ? 'Current Plan' : `Pay ₹${plan.price}/mo`
+                    }
                   </button>
                 )}
               </motion.div>

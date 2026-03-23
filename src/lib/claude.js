@@ -340,30 +340,56 @@ const getDefaultRoadmapWithResources = (domain) => {
   return roadmaps[domain] || roadmaps['fullstack'];
 };
 
-export const generateDailyTasks = async (nodeData, anxietyLevel) => {
-  const system = `You are a helpful study planner for engineering students.
-Generate practical daily tasks. Always respond with ONLY valid JSON.`;
+export const generateDailyTasks = async (node, difficulty = 'medium') => {
+  const apiKey = import.meta.env.VITE_CLAUDE_API_KEY;
+  const dayNum = node.day_number || node.order_index + 1;
 
-  const user = `Generate 3 daily tasks for this learning node:
-Node: ${nodeData.title}
-Description: ${nodeData.description}
-Anxiety Level: ${anxietyLevel} (high anxiety = simpler tasks)
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Generate daily learning tasks for Day ${dayNum}: ${node.title}
+Difficulty: ${difficulty}
 
-Return ONLY this JSON:
+Return ONLY valid JSON:
 {
   "tasks": [
     {
-      "title": "string",
-      "description": "string",
-      "type": "video|reading|coding|project",
-      "estimated_minutes": number
+      "title": "task title",
+      "description": "what to do in detail",
+      "type": "reading|coding|practice|video",
+      "estimated_minutes": 25,
+      "resource_url": "https://..."
     }
   ]
-}`;
-
-  const text = await callClaude(system, user, 800);
-  const clean = text.replace(/```json|```/g, '').trim();
-  return JSON.parse(clean);
+}
+Generate 3 tasks for today. Make them specific to ${node.title}.`
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(clean);
+  } catch {
+    return {
+      tasks: [
+        { title: `Study: ${node.title}`, description: `Read and understand core concepts of ${node.title}`, type: 'reading', estimated_minutes: 20, resource_url: '' },
+        { title: `Practice: ${node.title} exercises`, description: `Write code implementing ${node.title} concepts`, type: 'coding', estimated_minutes: 30, resource_url: '' },
+        { title: `Build: Mini project with ${node.title}`, description: `Apply ${node.title} by building something small`, type: 'practice', estimated_minutes: 45, resource_url: '' },
+      ]
+    };
+  }
 };
 
 export const generateTest = async (nodeTitle, skills) => {
