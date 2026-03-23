@@ -144,42 +144,80 @@ export const detectWeaknesses = (tests, skills, tasks) => {
   };
 };
 
-export const getJobReadiness = (scoreData, profile) => {
-  if (!scoreData) return { percentage: 0, status: 'Not Started', color: '#666', badge: '⭕' };
-  const { raw } = scoreData;
+export const getJobReadiness = (scoreData, profile, extraData = {}) => {
+  const raw = scoreData?.raw || {};
 
-  const roadmapPct = raw.totalNodes > 0
-    ? (raw.completedNodes / raw.totalNodes) * 30 : 0;
+  // 30% — Skill Score component
+  const scoreComponent = Math.min(30, ((profile?.skill_score || 0) / 1000) * 30);
 
-  const scorePct = (scoreData.total / 1000) * 30;
+  // 30% — Roadmap progress component
+  const totalNodes = raw.totalNodes || extraData.totalNodes || 1;
+  const completedNodes = raw.completedNodes || extraData.completedNodes || 0;
+  const roadmapComponent = Math.min(30, (completedNodes / totalNodes) * 30);
 
-  const projectPct = Math.min(20,
-    (raw.verifiedProjects * 8) + (raw.totalProjects * 2)
+  // 20% — Projects component
+  const verifiedProjects = raw.verifiedProjects || extraData.verifiedProjects || 0;
+  const totalProjects = raw.totalProjects || extraData.totalProjects || 0;
+  const projectComponent = Math.min(20,
+    (verifiedProjects * 8) + (totalProjects * 2)
   );
 
-  const testPct = Math.min(20,
-    raw.totalTests > 0
-      ? (raw.avgTestScore / 100) * 20 : 0
+  // 20% — Tests component
+  const totalTests = raw.totalTests || extraData.totalTests || 0;
+  const passedTests = raw.passedTests || extraData.passedTests || 0;
+  const avgTestScore = raw.avgTestScore || extraData.avgTestScore || 0;
+  const testComponent = Math.min(20,
+    totalTests > 0
+      ? ((passedTests / totalTests) * 10) + ((avgTestScore / 100) * 10)
+      : 0
   );
 
-  const readiness = Math.min(100, Math.round(
-    roadmapPct + scorePct + projectPct + testPct
+  const percentage = Math.min(100, Math.round(
+    scoreComponent + roadmapComponent + projectComponent + testComponent
   ));
 
-  let status, color, badge;
-  if (readiness >= 80) {
-    status = 'Job Ready ✅'; color = '#00FF94'; badge = '🏆';
-  } else if (readiness >= 60) {
-    status = 'Almost Ready 🔥'; color = '#FFB347'; badge = '🔥';
-  } else if (readiness >= 40) {
-    status = 'Improving 📈'; color = '#4A9EFF'; badge = '📈';
-  } else if (readiness >= 20) {
-    status = 'Just Started 🌱'; color = '#7B61FF'; badge = '🌱';
+  let status, color, badge, description, nextStep;
+
+  if (percentage >= 80) {
+    status = 'Interview Ready 🏆';
+    color = '#FFD700';
+    badge = '🏆';
+    description = 'You are ready for job interviews. Start applying now!';
+    nextStep = 'Apply to companies on the platform';
+  } else if (percentage >= 60) {
+    status = 'Job Ready ✅';
+    color = '#00FF94';
+    badge = '✅';
+    description = 'Strong profile. A few more projects will make you unstoppable.';
+    nextStep = 'Add 1 more verified project to reach Interview Ready';
+  } else if (percentage >= 30) {
+    status = 'Learning 📈';
+    color = '#4A9EFF';
+    badge = '📈';
+    description = 'Good progress. Keep completing roadmap nodes and taking tests.';
+    nextStep = 'Complete 3 more roadmap nodes + pass 2 more tests';
   } else {
-    status = 'Not Started'; color = '#666'; badge = '⭕';
+    status = 'Beginner 🌱';
+    color = '#7B61FF';
+    badge = '🌱';
+    description = 'Just getting started. Complete your first 3 roadmap nodes.';
+    nextStep = 'Complete first 3 roadmap nodes to level up';
   }
 
-  return { percentage: readiness, status, color, badge };
+  const breakdown = {
+    score:    { value: Math.round(scoreComponent),   max: 30, label: 'Skill Score',       color: '#00FF94' },
+    roadmap:  { value: Math.round(roadmapComponent), max: 30, label: 'Roadmap Progress',  color: '#4A9EFF' },
+    projects: { value: Math.round(projectComponent), max: 20, label: 'Projects',          color: '#7B61FF' },
+    tests:    { value: Math.round(testComponent),    max: 20, label: 'Tests',             color: '#FFB347' },
+  };
+
+  return {
+    percentage, status, color, badge, description, nextStep, breakdown,
+    level: percentage >= 80 ? 'interview_ready'
+      : percentage >= 60 ? 'job_ready'
+      : percentage >= 30 ? 'learning'
+      : 'beginner',
+  };
 };
 
 export const saveScoreHistory = async (studentId, score, breakdown, supabase) => {

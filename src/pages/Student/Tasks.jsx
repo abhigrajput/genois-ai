@@ -5,6 +5,7 @@ import { Play, Pause, RotateCcw, CheckCircle,
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { generateDailyTasks } from '../../lib/claude';
+import { calculateDetailedScore } from '../../lib/scoring';
 import useStore from '../../store/useStore';
 import usePlan from '../../hooks/usePlan';
 import UpgradePrompt from '../../components/ui/UpgradePrompt';
@@ -293,6 +294,13 @@ const Tasks = () => {
     }
 
     toast.success('+15 Genois Points! 🔥');
+
+    // Recalculate and persist score
+    calculateDetailedScore(profile.id, supabase).then(detailed => {
+      supabase.from('profiles')
+        .update({ skill_score: detailed.total })
+        .eq('id', profile.id);
+    });
 
     const updatedTasks = tasks.map(t =>
       t.id === taskId ? { ...t, status: 'completed' } : t

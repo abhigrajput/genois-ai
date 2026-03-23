@@ -4,6 +4,7 @@ import { Flame, Zap, CheckCircle, Clock,
          TrendingUp, Star, Play, FolderOpen, AlertTriangle } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { SkeletonCard } from '../../components/ui/Skeleton';
+import JobReadinessMeter from '../../components/ui/JobReadinessMeter';
 import { supabase } from '../../lib/supabase';
 import { calculateDetailedScore, getJobReadiness, detectWeaknesses } from '../../lib/scoring';
 import useStore from '../../store/useStore';
@@ -205,36 +206,14 @@ const Dashboard = () => {
 
         {/* Job Readiness Meter */}
         {jobReadiness && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-5 p-4 rounded-xl"
-            style={{ background: `${jobReadiness.color}08`, border: `1px solid ${jobReadiness.color}20` }}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{jobReadiness.badge}</span>
-                <div>
-                  <p className="text-sm font-bold text-white">Job Readiness</p>
-                  <p className="text-xs text-gray-500">{jobReadiness.status}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-xl font-bold font-heading" style={{ color: jobReadiness.color }}>
-                  {jobReadiness.percentage}%
-                </span>
-                <Link to="/student/score" className="block text-xs text-primary hover:underline">
-                  see breakdown →
-                </Link>
-              </div>
-            </div>
-            <div className="h-2 bg-dark-600 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${jobReadiness.percentage}%` }}
-                transition={{ duration: 1.5 }}
-                className="h-full rounded-full"
-                style={{ background: jobReadiness.color }}
-              />
-            </div>
-          </motion.div>
+          <div className="mb-5">
+            <JobReadinessMeter
+              jobReadiness={jobReadiness}
+              showBreakdown={false}
+              showNextStep={true}
+              compact={false}
+            />
+          </div>
         )}
 
         {/* KPI Cards */}

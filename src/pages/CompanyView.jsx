@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { calculateDetailedScore, getJobReadiness } from '../lib/scoring';
 import { getTrustBadge } from '../lib/trust';
 import TrustPanel from '../components/ui/TrustPanel';
+import JobReadinessMeter from '../components/ui/JobReadinessMeter';
 
 const CompanyView = () => {
   const { id } = useParams();
@@ -176,26 +177,14 @@ const CompanyView = () => {
         </motion.div>
 
         {/* Job Readiness */}
-        <div className="bg-dark-800 border border-dark-600 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-bold text-white font-heading">Job Readiness</p>
-            <span className="text-lg font-bold font-heading" style={{ color:jobReadiness.color }}>
-              {jobReadiness.percentage}%
-            </span>
-          </div>
-          <div className="h-3 bg-dark-600 rounded-full overflow-hidden mb-1">
-            <motion.div
-              initial={{ width:0 }}
-              animate={{ width:`${jobReadiness.percentage}%` }}
-              transition={{ duration:1.5 }}
-              className="h-full rounded-full"
-              style={{ background:`linear-gradient(90deg, ${jobReadiness.color}80, ${jobReadiness.color})` }}
-            />
-          </div>
-          <p className="text-xs font-semibold" style={{ color:jobReadiness.color }}>
-            {jobReadiness.status}
-          </p>
-        </div>
+        {jobReadiness && (
+          <JobReadinessMeter
+            jobReadiness={jobReadiness}
+            showBreakdown={true}
+            showNextStep={false}
+            compact={false}
+          />
+        )}
 
         {/* Score Breakdown */}
         {scoreData && (

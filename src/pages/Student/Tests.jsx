@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, Clock, Trophy,
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { generateTest } from '../../lib/claude';
+import { calculateDetailedScore } from '../../lib/scoring';
 import useStore from '../../store/useStore';
 import toast from 'react-hot-toast';
 
@@ -249,13 +250,16 @@ const Tests = () => {
 
     if (passed) {
       toast.success(`🏆 Passed! ${score}/${totalMarks}`);
-      const gain = (score / totalMarks) * 50;
-      await supabase.from('profiles')
-        .update({ skill_score: Math.min(1000, (profile.skill_score || 0) + gain) })
-        .eq('id', profile.id);
     } else {
       toast.error(`${score}/${totalMarks} — Keep practicing!`);
     }
+
+    // Recalculate full score after every test attempt
+    calculateDetailedScore(profile.id, supabase).then(detailed => {
+      supabase.from('profiles')
+        .update({ skill_score: detailed.total })
+        .eq('id', profile.id);
+    });
   };
 
   const formatTime = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;

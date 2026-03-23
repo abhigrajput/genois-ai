@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { AreaChart, Area, XAxis, YAxis,
          Tooltip, ResponsiveContainer } from 'recharts';
 import TrustPanel from '../../components/ui/TrustPanel';
+import JobReadinessMeter from '../../components/ui/JobReadinessMeter';
 
 const BADGES = [
   {
@@ -104,6 +105,7 @@ const Profile = () => {
   const [attempts, setAttempts] = useState([]);
   const [scoreHistory, setScoreHistory] = useState([]);
   const [scoreData, setScoreData] = useState(null);
+  const [jobReadiness, setJobReadiness] = useState(null);
   const [earnedBadges, setEarnedBadges] = useState([]);
   const [weakTopics, setWeakTopics] = useState([]);
   const [strongTopics, setStrongTopics] = useState([]);
@@ -185,6 +187,17 @@ const Profile = () => {
     // Calculate score
     const detailed = await calculateDetailedScore(profile.id, supabase);
     setScoreData(detailed);
+    setJobReadiness(getJobReadiness(detailed, profile, {
+      totalNodes: nodeData.length,
+      completedNodes: nodeData.filter(n => n.status === 'completed').length,
+      verifiedProjects: projectData.filter(p => p.verified).length,
+      totalProjects: projectData.length,
+      totalTests: attemptData.length,
+      passedTests: attemptData.filter(a => a.passed).length,
+      avgTestScore: attemptData.length > 0
+        ? attemptData.reduce((a, t) => a + (t.percentage || 0), 0) / attemptData.length
+        : 0,
+    }));
 
     // Weak and strong topics
     const weak = [];
@@ -278,7 +291,6 @@ const Profile = () => {
 
   const score = Math.round(profile?.skill_score || 0);
   const tier = getTierConfig(score);
-  const jobReadiness = getJobReadiness(scoreData, profile);
   const completedNodes = nodes.filter(n => n.status === 'completed').length;
   const passedTests = attempts.filter(a => a.passed).length;
   const streak = profile?.streak_count || 0;
@@ -495,42 +507,14 @@ const Profile = () => {
         </div>
 
         {/* JOB READINESS */}
-        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="font-bold text-white font-heading text-sm flex items-center gap-2">
-                <Target size={15} className="text-primary" />
-                Job Readiness Meter
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Based on roadmap + score + projects + tests
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold font-heading" style={{ color:jobReadiness.color }}>
-                {jobReadiness.percentage}%
-              </div>
-              <div className="text-xs font-semibold" style={{ color:jobReadiness.color }}>
-                {jobReadiness.status}
-              </div>
-            </div>
-          </div>
-          <div className="h-3 bg-dark-600 rounded-full overflow-hidden mb-2">
-            <motion.div
-              initial={{ width:0 }}
-              animate={{ width:`${jobReadiness.percentage}%` }}
-              transition={{ duration:1.5, ease:'easeOut' }}
-              className="h-full rounded-full"
-              style={{ background:`linear-gradient(90deg, ${jobReadiness.color}80, ${jobReadiness.color})` }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-gray-600">
-            <span>Beginner (0%)</span>
-            <span>Improving (40%)</span>
-            <span>Almost Ready (70%)</span>
-            <span>Job Ready (85%+)</span>
-          </div>
-        </div>
+        {jobReadiness && (
+          <JobReadinessMeter
+            jobReadiness={jobReadiness}
+            showBreakdown={true}
+            showNextStep={true}
+            compact={false}
+          />
+        )}
 
         {/* SCORE BREAKDOWN */}
         {scoreData && (

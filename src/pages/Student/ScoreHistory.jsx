@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip,
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { calculateDetailedScore, detectWeaknesses, getJobReadiness } from '../../lib/scoring';
+import JobReadinessMeter from '../../components/ui/JobReadinessMeter';
 import useStore from '../../store/useStore';
 import usePlan from '../../hooks/usePlan';
 import UpgradePrompt from '../../components/ui/UpgradePrompt';
@@ -53,7 +54,7 @@ const ScoreHistory = () => {
   };
 
   const weaknesses  = detectWeaknesses(tests, skills);
-  const jobReadiness = getJobReadiness(scoreData);
+  const jobReadiness = getJobReadiness(scoreData, profile);
 
   const SKILL_LEVELS = [
     { min: 0,   max: 20,  label: 'Beginner',     color: '#666',    icon: '🌱' },
@@ -113,73 +114,12 @@ const ScoreHistory = () => {
         </div>
 
         {/* Job Readiness Meter */}
-        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
-          className="relative overflow-hidden rounded-2xl p-6"
-          style={{
-            background: `linear-gradient(135deg, ${currentLevel.color}10, rgba(18,18,26,0.9))`,
-            border: `1px solid ${currentLevel.color}25`,
-          }}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">{currentLevel.icon}</span>
-                <h2 className="text-xl font-bold font-heading text-white">{currentLevel.label}</h2>
-              </div>
-              <p className="text-sm text-gray-400">
-                {jobReadiness.status} · {jobReadiness.percentage}% job ready
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-4xl font-bold font-heading" style={{ color: currentLevel.color }}>
-                {scoreData?.total || 0}
-              </div>
-              <div className="text-xs text-gray-500">Genois Score™</div>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-              <span>Job Readiness</span>
-              <span style={{ color: currentLevel.color }}>{jobReadiness.percentage}%</span>
-            </div>
-            <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${jobReadiness.percentage}%` }}
-                transition={{ duration: 1.5, ease: 'easeOut' }}
-                className="h-full rounded-full"
-                style={{ background: `linear-gradient(90deg, ${currentLevel.color}80, ${currentLevel.color})` }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {SKILL_LEVELS.map((level, i) => {
-              const isActive  = jobReadiness.percentage >= level.min;
-              const isCurrent = level.label === currentLevel.label;
-              return (
-                <React.Fragment key={i}>
-                  <div className="flex flex-col items-center gap-1">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${
-                      isCurrent ? 'ring-2 ring-white ring-offset-1 ring-offset-dark-900' : ''
-                    }`}
-                      style={{ background: isActive ? level.color : 'rgba(255,255,255,0.1)' }}>
-                      {isActive ? '✓' : ''}
-                    </div>
-                    <span className="text-xs hidden md:block"
-                      style={{ color: isActive ? level.color : '#444', fontSize: '9px' }}>
-                      {level.label}
-                    </span>
-                  </div>
-                  {i < SKILL_LEVELS.length - 1 && (
-                    <div className="flex-1 h-0.5 mb-4"
-                      style={{ background: jobReadiness.percentage > level.max ? currentLevel.color : 'rgba(255,255,255,0.1)' }} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </motion.div>
+        <JobReadinessMeter
+          jobReadiness={jobReadiness}
+          showBreakdown={true}
+          showNextStep={true}
+          compact={false}
+        />
 
         {/* Score Breakdown Transparency */}
         {!can('scoreBreakdown') ? (
