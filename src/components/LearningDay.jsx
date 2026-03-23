@@ -5,6 +5,9 @@ import { CheckCircle, Code, ChevronRight,
          Zap, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateAIResources } from '../lib/aiResources';
+import { generateQuiz, generateCodingTest,
+         saveQuizResult, saveCodingResult,
+         getStudentLevel } from '../lib/testGenerator';
 import useStore from '../store/useStore';
 import toast from 'react-hot-toast';
 
@@ -63,7 +66,31 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
     setGenerating(true);
     toast.loading('AI generating resources...', { id: 'res' });
     try {
-      const res = await generateAIResources('beginner', 'beginner', node.title);
+      const [baseRes, quizResult, codingResult] = await Promise.all([
+        generateAIResources('beginner', 'beginner', node.title),
+        generateQuiz({
+          topic: node.title,
+          level: getStudentLevel(profile),
+          learningSpeed: profile?.learning_speed || 'normal',
+          weakTopics: profile?.weak_topics || [],
+          strongTopics: profile?.strong_topics || [],
+          nodeTitle: node.title,
+        }),
+        generateCodingTest({
+          topic: node.title,
+          level: getStudentLevel(profile),
+          learningSpeed: profile?.learning_speed || 'normal',
+          weakTopics: profile?.weak_topics || [],
+          strongTopics: profile?.strong_topics || [],
+          nodeTitle: node.title,
+        }),
+      ]);
+      const res = {
+        ...baseRes,
+        quiz: quizResult.questions,
+        codingChallenge: codingResult.challenge,
+        quizDifficulty: quizResult.difficulty,
+      };
       setResources(res);
       if (res.codingChallenge?.starterCode) setCodeAnswer(res.codingChallenge.starterCode);
       await supabase.from('roadmap_nodes').update({
@@ -103,7 +130,7 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
       toast.error('Answer all questions!'); return;
     }
     let correct = 0;
-    quiz.forEach((q, i) => { if (quizAnswers[i] === q.correct) correct++; });
+    quiz.forEach((q, i) => { if (quizAnswers[i] === (q.answer || q.correct)) correct++; });
     const score = Math.round((correct / quiz.length) * 100);
     const passed = score >= 50;
     const newAttempts = quizAttempts + 1;
@@ -111,7 +138,11 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
     setQuizSubmitted(true);
     setQuizAttempts(newAttempts);
 
-    if (passed) {
+    const { passed: quizPassed } = await saveQuizResult(
+      profile.id, node.id, node.title, score, quizAnswers, quiz, supabase
+    );
+
+    if (quizPassed) {
       toast.success(`Passed! ${score}% — +5 points!`);
       await supabase.from('learning_progress').upsert({
         student_id: profile.id, node_id: node.id,
@@ -122,15 +153,6 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
       setTimeout(() => setStep('coding'), 800);
     } else {
       toast.error(`${score}% — Need 50% to pass. Try again!`);
-      const failedTopics = quiz
-        .filter((q, i) => quizAnswers[i] !== q.correct)
-        .map(() => node.title);
-      if (failedTopics.length > 0) {
-        const current = profile?.weak_topics || [];
-        await supabase.from('profiles').update({
-          weak_topics: [...new Set([...current, ...failedTopics])],
-        }).eq('id', profile.id);
-      }
     }
   };
 
@@ -143,6 +165,7 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
     }
     setCodeSubmitted(true);
     toast.success('+10 points! Day complete!');
+    await saveCodingResult(profile.id, node.id, node.title, codeAnswer, supabase);
     await supabase.from('learning_progress').upsert({
       student_id: profile.id, node_id: node.id,
       video_watched: true, quiz_passed: true,
@@ -266,6 +289,23 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
             <span className="text-sm">📝</span>
             <span className="text-xs font-bold text-white">Step 2: Concept Quiz</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary">+5 pts</span>
+            {resources?.quizDifficulty && (
+              <span className="text-xs px-2 py-0.5 rounded-full capitalize"
+                style={{
+                  background: resources.quizDifficulty === 'hard'
+                    ? 'rgba(255,107,107,0.1)'
+                    : resources.quizDifficulty === 'medium'
+                    ? 'rgba(255,179,71,0.1)'
+                    : 'rgba(74,158,255,0.1)',
+                  color: resources.quizDifficulty === 'hard'
+                    ? '#FF6B6B'
+                    : resources.quizDifficulty === 'medium'
+                    ? '#FFB347'
+                    : '#4A9EFF',
+                }}>
+                {resources.quizDifficulty}
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-500 mb-4">
             5 questions · Need 50% · {quizAttempts > 0 ? `Attempt #${quizAttempts + 1}` : 'First attempt'}
@@ -317,7 +357,7 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
               </div>
               <div className="space-y-2 mb-3">
                 {quiz.map((q, qi) => {
-                  const correct = quizAnswers[qi] === q.correct;
+                  const correct = quizAnswers[qi] === (q.answer || q.correct);
                   return (
                     <div key={qi} className={`p-2.5 rounded-lg border ${
                       correct ? 'border-success/20 bg-success/5' : 'border-danger/20 bg-danger/5'
@@ -330,7 +370,7 @@ const LearningDay = ({ node, onComplete, onScoreUpdate }) => {
                           <p className="text-xs text-white">{q.question}</p>
                           {!correct && (
                             <p className="text-xs text-gray-500 mt-0.5">
-                              Correct: <span className="text-success">{q.correct}</span>
+                              Correct: <span className="text-success">{q.answer || q.correct}</span>
                             </p>
                           )}
                           <p className="text-xs text-gray-600 mt-0.5">💡 {q.explanation}</p>

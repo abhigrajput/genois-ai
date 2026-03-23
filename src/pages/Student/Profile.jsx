@@ -116,7 +116,7 @@ const Profile = () => {
   const [editForm, setEditForm] = useState({
     full_name: '', bio: '', github_username: '',
     target_role: '', college: '', branch: '',
-    graduation_year: '',
+    graduation_year: '', learning_speed: 'normal',
   });
   const [projectForm, setProjectForm] = useState({
     title: '', description: '', tech_stack: '',
@@ -134,6 +134,7 @@ const Profile = () => {
         college: profile.college || '',
         branch: profile.branch || '',
         graduation_year: profile.graduation_year || '',
+        learning_speed: profile.learning_speed || 'normal',
       });
     }
   }, [profile]);
@@ -238,7 +239,11 @@ const Profile = () => {
   const saveProfile = async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .update({ ...editForm, graduation_year: editForm.graduation_year ? parseInt(editForm.graduation_year) : null })
+      .update({
+          ...editForm,
+          learning_speed: editForm.learning_speed || 'normal',
+          graduation_year: editForm.graduation_year ? parseInt(editForm.graduation_year) : null,
+        })
       .eq('id', profile.id).select().single();
     if (!error) { setProfile(data); setEditing(false); toast.success('Profile saved! ✅'); }
     else toast.error('Failed to save');
@@ -399,6 +404,18 @@ const Profile = () => {
                     placeholder="Tell companies about yourself..."
                     rows={2}
                     className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary resize-none" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Learning Speed</label>
+                  <select
+                    value={editForm.learning_speed || 'normal'}
+                    onChange={e => setEditForm(f => ({ ...f, learning_speed: e.target.value }))}
+                    className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-primary">
+                    <option value="slow">🌱 Slow (Easy questions)</option>
+                    <option value="normal">⚡ Normal (Medium questions)</option>
+                    <option value="fast">🔥 Fast (Hard questions)</option>
+                  </select>
+                  <p className="text-xs text-gray-600 mt-1">Affects quiz difficulty and task count</p>
                 </div>
                 <button onClick={saveProfile}
                   className="px-6 py-2.5 bg-primary text-dark-900 font-bold rounded-xl text-sm">

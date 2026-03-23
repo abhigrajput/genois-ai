@@ -327,6 +327,22 @@ const Dashboard = () => {
           </motion.div>
         )}
 
+        {/* Adaptive Mode Hint */}
+        {profile?.weak_topics?.length > 0 && (
+          <div className="mb-6 p-3 rounded-xl text-xs"
+            style={{ background: 'rgba(74,158,255,0.06)', border: '1px solid rgba(74,158,255,0.15)' }}>
+            <p className="text-primary font-semibold mb-1">
+              🎯 Adaptive Mode Active
+            </p>
+            <p className="text-gray-400">
+              Your quizzes are easier for:
+              {' '}<span className="text-warning">{profile.weak_topics.slice(0, 2).join(', ')}</span>
+              {' '}and harder for:
+              {' '}<span className="text-success">{(profile.strong_topics || []).slice(0, 2).join(', ') || 'topics you master'}</span>
+            </p>
+          </div>
+        )}
+
         {/* Anxiety Check-in */}
         <AnimatePresence>
           {!anxiety && (
