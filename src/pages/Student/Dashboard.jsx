@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Zap, CheckCircle, Clock,
          TrendingUp, Star, Play, FolderOpen, AlertTriangle } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 import { supabase } from '../../lib/supabase';
 import { calculateDetailedScore, getJobReadiness, detectWeaknesses } from '../../lib/scoring';
 import useStore from '../../store/useStore';
@@ -90,45 +91,39 @@ const Dashboard = () => {
   }, [profile]);
 
   const fetchDashboardData = async () => {
-    setLoading(false);
+    setLoading(true);
     const today = new Date().toISOString().split('T')[0];
-    const { data: taskData } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('student_id', profile.id);
-    const todayTasks = (taskData || []).filter(t => t.due_date === today);
-    setTasks(todayTasks);
-    const done = todayTasks.filter(t => t.status === 'completed').length;
-    setTodayStats({ done, total: todayTasks.length, minutes: done * 25 });
 
-    // Load score breakdown + job readiness in background
+    // Fetch all data in parallel
+    const [taskRes, testRes, skillRes, projectRes] = await Promise.all([
+      supabase.from('tasks').select('*').eq('student_id', profile.id),
+      supabase.from('test_attempts').select('*').eq('student_id', profile.id),
+      supabase.from('skill_scores').select('*').eq('student_id', profile.id),
+      supabase.from('projects').select('*').eq('student_id', profile.id),
+    ]);
+
+    const allTasks   = taskRes.data    || [];
+    const testData   = testRes.data    || [];
+    const skillData  = skillRes.data   || [];
+    const projectList = projectRes.data || [];
+
+    const todayTasks = allTasks.filter(t => t.due_date === today);
+    const done = todayTasks.filter(t => t.status === 'completed').length;
+    setTasks(todayTasks);
+    setTodayStats({ done, total: todayTasks.length, minutes: done * 25 });
+    setTests(testData);
+    setSkills(skillData);
+    setWeaknesses(detectWeaknesses(testData, skillData, allTasks));
+    setProjects(projectList);
+    setLoading(false);
+
+    // Load score breakdown in background (non-blocking)
     calculateDetailedScore(profile.id, supabase)
       .then(sd => {
         setScoreData(sd);
         setJobReadiness(getJobReadiness(sd, profile));
       })
       .catch(() => {});
-
-    // Load tests + skills for weakness detection
-    const [testRes, skillRes] = await Promise.all([
-      supabase.from('test_attempts').select('*').eq('student_id', profile.id),
-      supabase.from('skill_scores').select('*').eq('student_id', profile.id),
-    ]);
-    const testData  = testRes.data  || [];
-    const skillData = skillRes.data || [];
-    setTests(testData);
-    setSkills(skillData);
-    const { data: taskData2 } = await supabase
-      .from('tasks').select('*').eq('student_id', profile.id);
-    setWeaknesses(detectWeaknesses(testData, skillData, taskData2 || []));
-
-    // Load projects + check milestone
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('student_id', profile.id);
-    const projectList = projectData || [];
-    setProjects(projectList);
 
     const timeline = profile?.timeline || '6months';
     const tl = TIMELINES[timeline];
@@ -165,6 +160,19 @@ const Dashboard = () => {
   const tier = getScoreTier(profile?.skill_score || 0);
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
   const daysActive = profile?.streak_count || 0;
+
+  if (loading) return (
+    <DashboardLayout>
+      <div className="max-w-4xl mx-auto space-y-4">
+        <SkeletonCard />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1,2,3,4].map(i => <SkeletonCard key={i} />)}
+        </div>
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    </DashboardLayout>
+  );
 
   return (
     <DashboardLayout>

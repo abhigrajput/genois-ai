@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+
+const useDebounce = (value, delay = 300) => {
+  const [debounced, setDebounced] = React.useState(value);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+};
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, Star, Zap,
          Github, ExternalLink, X } from 'lucide-react';
@@ -83,12 +92,14 @@ const CompanySearch = () => {
   const [compareList, setCompareList] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
 
+  const debouncedSearch = useDebounce(search, 300);
+
   useEffect(() => { fetchStudents(); }, []);
 
   useEffect(() => {
     let result = students;
-    if (search) {
-      const q = search.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       result = result.filter(s =>
         s.full_name?.toLowerCase().includes(q) ||
         s.college?.toLowerCase().includes(q) ||
@@ -100,7 +111,7 @@ const CompanySearch = () => {
       result = result.filter(s => getTierConfig(s.skill_score || 0).label === selectedTier);
     }
     setFiltered(result);
-  }, [search, minScore, selectedTier, students]);
+  }, [debouncedSearch, minScore, selectedTier, students]);
 
   const fetchStudents = async () => {
     setLoading(true);

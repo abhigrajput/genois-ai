@@ -1,6 +1,32 @@
 const CLAUDE_API_KEY = import.meta.env.VITE_CLAUDE_API_KEY;
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
+const apiCache = new Map();
+
+const cachedClaudeCall = async (cacheKey, payload) => {
+  if (apiCache.has(cacheKey)) {
+    return apiCache.get(cacheKey);
+  }
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1000,
+      ...payload,
+    }),
+  });
+  const data = await response.json();
+  apiCache.set(cacheKey, data);
+  setTimeout(() => apiCache.delete(cacheKey), 5 * 60 * 1000);
+  return data;
+};
+
 const callClaude = async (systemPrompt, userPrompt, maxTokens = 2000) => {
   const response = await fetch(API_URL, {
     method: 'POST',

@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+
+const useDebounce = (value, delay = 300) => {
+  const [debounced, setDebounced] = React.useState(value);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+};
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pin, Code, BookOpen,
          Search, Trash2, X, Copy,
@@ -99,6 +108,7 @@ const Notes = () => {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [topic, setTopic] = useState('All');
   const [creating, setCreating] = useState(false);
   const [noteType, setNoteType] = useState('theory');
@@ -272,9 +282,9 @@ const Notes = () => {
 
   const filtered = notes.filter(n => {
     const matchTopic = topic === 'All' || n.topic === topic;
-    const matchSearch = !search ||
-      n.title?.toLowerCase().includes(search.toLowerCase()) ||
-      n.content?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !debouncedSearch ||
+      n.title?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      n.content?.toLowerCase().includes(debouncedSearch.toLowerCase());
     return matchTopic && matchSearch;
   });
 
