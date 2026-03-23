@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, CheckCircle, BookOpen, Code, FileText,
          Zap, Clock, ChevronRight, X, ExternalLink } from 'lucide-react';
+import LearningDay from '../../components/LearningDay';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { generateRoadmap } from '../../lib/claude';
@@ -456,6 +457,38 @@ const Roadmap = () => {
                     {selectedNode.title}
                   </h2>
                   <p className="text-gray-400 text-sm mb-4">{selectedNode.description}</p>
+
+                  {selectedNode && selectedNode.status !== 'locked' && (
+                    <LearningDay
+                      node={selectedNode}
+                      onComplete={async (completedNode) => {
+                        const nextNode = nodes.find(n =>
+                          n.order_index === completedNode.order_index + 1
+                        );
+                        if (nextNode) {
+                          await supabase.from('roadmap_nodes')
+                            .update({ status: 'unlocked' })
+                            .eq('id', nextNode.id);
+                          toast.success(`${nextNode.title} unlocked!`);
+                          fetchRoadmap();
+                        }
+                      }}
+                      onScoreUpdate={(points) => {
+                        toast.success(`+${points} points!`, { duration: 1500 });
+                      }}
+                    />
+                  )}
+
+                  {selectedNode && selectedNode.status === 'locked' && (
+                    <div className="mt-4 p-4 rounded-xl text-center"
+                      style={{ background: 'rgba(34,34,51,0.5)', border: '1px solid rgba(34,34,51,0.8)' }}>
+                      <div className="text-2xl mb-2">🔒</div>
+                      <p className="text-sm font-semibold text-white mb-1">Day Locked</p>
+                      <p className="text-xs text-gray-500">
+                        Complete the previous day to unlock.
+                      </p>
+                    </div>
+                  )}
 
                   {selectedNode.skills?.length > 0 && (
                     <div className="mb-4">
