@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import TrustPanel from '../../components/ui/TrustPanel';
 
 const useDebounce = (value, delay = 300) => {
   const [debounced, setDebounced] = React.useState(value);
@@ -372,6 +373,15 @@ const CompanySearch = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Trust Engine Panel */}
+                <TrustPanel
+                  studentId={selectedStudent.id}
+                  profile={selectedStudent}
+                  skills={studentSkills}
+                  projects={studentProjects}
+                  compact={true}
+                />
 
                 {/* Actions */}
                 <div className="space-y-2">

@@ -11,6 +11,7 @@ import useStore from '../../store/useStore';
 import toast from 'react-hot-toast';
 import { AreaChart, Area, XAxis, YAxis,
          Tooltip, ResponsiveContainer } from 'recharts';
+import TrustPanel from '../../components/ui/TrustPanel';
 
 const BADGES = [
   {
@@ -813,6 +814,15 @@ const Profile = () => {
             })}
           </div>
         </div>
+
+        {/* TRUST ENGINE */}
+        <TrustPanel
+          studentId={profile?.id}
+          profile={profile}
+          skills={skills}
+          projects={projects}
+          compact={true}
+        />
 
         {/* PUBLIC LINK */}
         <div className="bg-dark-800 border border-dark-600 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">

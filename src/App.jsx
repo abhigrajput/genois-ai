@@ -19,6 +19,7 @@ const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Auth/Login'));
 const Register = lazy(() => import('./pages/Auth/Register'));
 const PublicProfile = lazy(() => import('./pages/Public/PublicProfile'));
+const CompanyView = lazy(() => import('./pages/CompanyView'));
 const Leaderboard = lazy(() => import('./pages/Public/Leaderboard'));
 const Demo = lazy(() => import('./pages/Demo'));
 const Pricing = lazy(() => import('./pages/Pricing'));
@@ -91,6 +92,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/u/:username" element={<PublicProfile />} />
+          <Route path="/company-view/:id" element={<CompanyView />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/demo" element={<Demo />} />
           <Route path="/pricing" element={<Pricing />} />
