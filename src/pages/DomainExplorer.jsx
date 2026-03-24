@@ -109,72 +109,173 @@ const DomainExplorer = () => {
     toast.loading('Setting up your roadmap...', { id: 'save' });
 
     try {
-      // Step 1: Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          domain_id: selectedDomain.id,
-          timeline: selectedTimeline || '6months',
-          target_role: selectedDomain.jobRoles?.[0] || '',
-          onboarding_done: true,
-        })
-        .eq('id', profile.id);
+      // Step 1: Update profile domain
+      await supabase.from('profiles').update({
+        domain_id: selectedDomain.id,
+        timeline: selectedTimeline || '6months',
+        target_role: selectedDomain.jobRoles?.[0] || '',
+        onboarding_done: true,
+      }).eq('id', profile.id);
 
-      if (profileError) console.error('Profile update error:', profileError);
-
-      // Step 2: Get old roadmaps
-      const { data: oldRoadmaps } = await supabase
+      // Step 2: Delete roadmaps - CASCADE will auto-delete
+      // nodes AND learning_progress automatically
+      await supabase
         .from('roadmaps')
-        .select('id')
+        .delete()
         .eq('student_id', profile.id);
 
-      // Step 3: Delete children first then parents
-      if (oldRoadmaps && oldRoadmaps.length > 0) {
-        const oldRoadmapIds = oldRoadmaps.map(r => r.id);
+      // Step 3: Delete tasks
+      await supabase
+        .from('tasks')
+        .delete()
+        .eq('student_id', profile.id);
 
-        // Get node IDs for these roadmaps
-        const { data: oldNodes } = await supabase
-          .from('roadmap_nodes')
-          .select('id')
-          .in('roadmap_id', oldRoadmapIds);
+      // Wait for deletes to complete
+      await new Promise(r => setTimeout(r, 1000));
 
-        // Delete learning_progress by NODE ID (not roadmap_id)
-        if (oldNodes && oldNodes.length > 0) {
-          const oldNodeIds = oldNodes.map(n => n.id);
-          await supabase
-            .from('learning_progress')
-            .delete()
-            .in('node_id', oldNodeIds);
-        }
-
-        // Delete nodes
-        const { error: nodesDeleteError } = await supabase
-          .from('roadmap_nodes')
-          .delete()
-          .in('roadmap_id', oldRoadmapIds);
-        if (nodesDeleteError) console.error('Nodes delete error:', nodesDeleteError);
-
-        // Wait for deletes
-        await new Promise(r => setTimeout(r, 600));
-
-        // Delete roadmaps
-        const { error: rmDeleteError } = await supabase
-          .from('roadmaps')
-          .delete()
-          .eq('student_id', profile.id);
-        if (rmDeleteError) console.error('Roadmap delete error:', rmDeleteError);
-
-        // Wait again
-        await new Promise(r => setTimeout(r, 400));
-      }
-
-      // Step 4: Delete old tasks
-      await supabase.from('tasks').delete().eq('student_id', profile.id);
-
-      // Step 5: Roadmap data per domain
+      // Step 4: Domain roadmap data
       const domain = selectedDomain.id;
 
       const ROADMAPS = {
+        fullstack: [
+          { day:1,  title:'HTML Fundamentals',       type:'topic',   skills:['HTML5','Semantic HTML'],      mini_project:'Build a personal bio page',              project_brief:null,  resources:[{title:'HTML Full Course',url:'https://www.youtube.com/watch?v=pQN-pnXPaVg',type:'video',duration:'2h'}] },
+          { day:2,  title:'CSS and Flexbox',          type:'topic',   skills:['CSS3','Flexbox'],             mini_project:'Style bio page with CSS',                project_brief:null,  resources:[{title:'CSS Full Course',url:'https://www.youtube.com/watch?v=OXGznpKZ_sA',type:'video',duration:'2h'}] },
+          { day:3,  title:'CSS Grid and Responsive',  type:'topic',   skills:['Grid','Media Queries'],       mini_project:'Make bio page mobile responsive',        project_brief:null,  resources:[{title:'CSS Grid Tutorial',url:'https://www.youtube.com/watch?v=EiNiSFIPIQE',type:'video',duration:'1h'}] },
+          { day:4,  title:'JavaScript Basics',        type:'topic',   skills:['Variables','Functions'],      mini_project:'Add interactivity to bio page',          project_brief:null,  resources:[{title:'JavaScript Full Course',url:'https://www.youtube.com/watch?v=PkZNo7MFNFg',type:'video',duration:'3h'}] },
+          { day:5,  title:'JS Arrays and Objects',    type:'topic',   skills:['Arrays','Objects'],           mini_project:'Build a contact list app',               project_brief:null,  resources:[{title:'JS Arrays',url:'https://www.youtube.com/watch?v=7W4pQQ20nJg',type:'video',duration:'1h'}] },
+          { day:6,  title:'DOM Manipulation',         type:'topic',   skills:['DOM','Events'],               mini_project:'Build todo list with DOM',               project_brief:null,  resources:[{title:'DOM Crash Course',url:'https://www.youtube.com/watch?v=0ik6X4DJKCc',type:'video',duration:'1h'}] },
+          { day:7,  title:'Async JS and Fetch API',   type:'project', skills:['Promises','async/await'],     mini_project:'Fetch weather from OpenWeather API',     project_brief:'PROJECT 1: Weather App using OpenWeather API. Show temperature and humidity. Deploy on Vercel.',  resources:[{title:'Async JS',url:'https://www.youtube.com/watch?v=PoRJizFvM7s',type:'video',duration:'1h'}] },
+          { day:8,  title:'React Introduction',       type:'topic',   skills:['React','JSX'],                mini_project:'Create first React component',           project_brief:null,  resources:[{title:'React Full Course',url:'https://www.youtube.com/watch?v=CgkZ7MvWUAA',type:'video',duration:'4h'}] },
+          { day:9,  title:'React Hooks useState',     type:'topic',   skills:['useState','State'],           mini_project:'Build counter app with useState',        project_brief:null,  resources:[{title:'React Hooks',url:'https://www.youtube.com/watch?v=cF2lQ_gZeA8',type:'video',duration:'2h'}] },
+          { day:10, title:'React useEffect and APIs', type:'project', skills:['useEffect','API calls'],      mini_project:'Build GitHub profile finder',            project_brief:'PROJECT 2: GitHub Finder. Search user, show repos and followers. React plus GitHub API. Deploy.',  resources:[{title:'useEffect Tutorial',url:'https://www.youtube.com/watch?v=gv9ugDJ1ynU',type:'video',duration:'1h'}] },
+          { day:11, title:'Node.js Fundamentals',     type:'topic',   skills:['Node.js','NPM'],              mini_project:'Build a CLI calculator',                 project_brief:null,  resources:[{title:'Node.js Crash Course',url:'https://www.youtube.com/watch?v=fBNz5xF-Kx4',type:'video',duration:'1.5h'}] },
+          { day:12, title:'Express REST APIs',        type:'topic',   skills:['Express','REST'],             mini_project:'Build Notes CRUD API',                   project_brief:null,  resources:[{title:'Express Crash Course',url:'https://www.youtube.com/watch?v=SccSCuHhOw0',type:'video',duration:'1h'}] },
+          { day:13, title:'MongoDB and Mongoose',     type:'topic',   skills:['MongoDB','Mongoose'],         mini_project:'Connect Notes API to MongoDB',           project_brief:null,  resources:[{title:'MongoDB Crash Course',url:'https://www.youtube.com/watch?v=-56x56UppqQ',type:'video',duration:'1.5h'}] },
+          { day:14, title:'JWT Authentication',       type:'topic',   skills:['JWT','Auth','bcrypt'],        mini_project:'Add login to Notes app',                 project_brief:null,  resources:[{title:'JWT Auth Tutorial',url:'https://www.youtube.com/watch?v=mbsmsi7l3r4',type:'video',duration:'1h'}] },
+          { day:15, title:'Deploy Full Stack App',    type:'project', skills:['Vercel','Railway'],           mini_project:'Deploy your full stack app live',        project_brief:'PROJECT 3: Job Board App. Post jobs, apply with auth. Full CRUD. Your main portfolio project.',  resources:[{title:'Deploy to Railway',url:'https://www.youtube.com/watch?v=MusIvEKjqsc',type:'video',duration:'30min'}] },
+        ],
+        cybersecurity: [
+          { day:1, title:'Networking Fundamentals',  type:'topic',   skills:['TCP/IP','DNS','HTTP'],         mini_project:'Analyze packets with Wireshark',         project_brief:null,  resources:[{title:'Networking Full Course',url:'https://www.youtube.com/watch?v=IPvYjXCsTg8',type:'video',duration:'2h'}] },
+          { day:2, title:'Linux Command Line',       type:'topic',   skills:['Linux','Bash','Permissions'],  mini_project:'Complete OverTheWire Bandit Level 1-5',  project_brief:null,  resources:[{title:'Linux Full Course',url:'https://www.youtube.com/watch?v=sWbUDq4S6Y8',type:'video',duration:'2h'}] },
+          { day:3, title:'Python for Security',      type:'topic',   skills:['Python','Scripting'],         mini_project:'Build a port scanner in Python',         project_brief:null,  resources:[{title:'Python for Hacking',url:'https://www.youtube.com/watch?v=FD0A9KxeJMQ',type:'video',duration:'2h'}] },
+          { day:4, title:'Web Security and OWASP',   type:'project', skills:['OWASP','XSS','SQLi'],         mini_project:'Find 3 vulnerabilities in DVWA',         project_brief:'PROJECT 1: Vulnerability Scanner. Python script for OWASP Top 10. Write professional security report.',  resources:[{title:'OWASP Top 10',url:'https://www.youtube.com/watch?v=KAOcMeMoQ64',type:'video',duration:'2h'}] },
+          { day:5, title:'Penetration Testing',      type:'topic',   skills:['Nmap','Burp Suite','Recon'],  mini_project:'Complete a HackTheBox easy machine',     project_brief:null,  resources:[{title:'PenTest Full Course',url:'https://www.youtube.com/watch?v=3Kq1MIfTWCE',type:'video',duration:'3h'}] },
+          { day:6, title:'Cryptography Basics',      type:'topic',   skills:['AES','RSA','Hashing'],        mini_project:'Implement AES encryption in Python',     project_brief:null,  resources:[{title:'Cryptography Course',url:'https://www.youtube.com/watch?v=AQDCe585Lnc',type:'video',duration:'2h'}] },
+          { day:7, title:'CTF and Bug Bounty',       type:'project', skills:['CTF','Bug Bounty','Reports'], mini_project:'Solve 3 CTF challenges on PicoCTF',      project_brief:'PROJECT 2: Security Audit Report. Pen test DVWA. Write report with all vulnerabilities and fixes.',  resources:[{title:'CTF Guide',url:'https://www.youtube.com/watch?v=8ev9ZX9J45A',type:'video',duration:'1h'}] },
+        ],
+        dsa: [
+          { day:1,  title:'Arrays and Complexity',   type:'topic',   skills:['Arrays','Big O'],             mini_project:'Solve 5 LeetCode Easy array problems',   project_brief:null,  resources:[{title:'Arrays NeetCode',url:'https://www.youtube.com/watch?v=3OamzN90kPg',type:'video',duration:'2h'}] },
+          { day:2,  title:'Two Pointer Technique',   type:'topic',   skills:['Two Pointer'],                mini_project:'Two Sum and Valid Palindrome',            project_brief:null,  resources:[{title:'Two Pointer',url:'https://www.youtube.com/watch?v=0l2nePjDFuA',type:'video',duration:'1h'}] },
+          { day:3,  title:'Sliding Window',          type:'topic',   skills:['Sliding Window'],             mini_project:'Max Subarray, Buy Sell Stock',            project_brief:null,  resources:[{title:'Sliding Window',url:'https://www.youtube.com/watch?v=EHCGAZBbB88',type:'video',duration:'1h'}] },
+          { day:4,  title:'HashMap and HashSet',     type:'project', skills:['HashMap','HashSet'],          mini_project:'Group Anagrams and Valid Anagram',        project_brief:'PROJECT 1: Algorithm Visualizer. Animate bubble sort and merge sort. React plus CSS animations.',  resources:[{title:'HashMap Problems',url:'https://www.youtube.com/watch?v=UrZ3LvdtL_k',type:'video',duration:'1h'}] },
+          { day:5,  title:'Linked Lists',            type:'topic',   skills:['Linked List','Reversal'],     mini_project:'Implement LinkedList from scratch',       project_brief:null,  resources:[{title:'Linked Lists',url:'https://www.youtube.com/watch?v=Ast5sKgXXtg',type:'video',duration:'2h'}] },
+          { day:6,  title:'Stacks and Queues',       type:'topic',   skills:['Stack','Queue'],              mini_project:'Valid Parentheses and Min Stack',         project_brief:null,  resources:[{title:'Stacks Queues',url:'https://www.youtube.com/watch?v=GYptUgnIM_I',type:'video',duration:'1.5h'}] },
+          { day:7,  title:'Binary Trees',            type:'project', skills:['Binary Tree','DFS','BFS'],   mini_project:'All tree traversals plus max depth',      project_brief:'PROJECT 2: DSA Visualizer. Visualize BST insert delete search with step by step animations.',  resources:[{title:'Binary Trees',url:'https://www.youtube.com/watch?v=_ANrF3FJm7I',type:'video',duration:'3h'}] },
+          { day:8,  title:'Graphs BFS and DFS',      type:'topic',   skills:['Graph','BFS','DFS'],          mini_project:'Number of Islands, Clone Graph',          project_brief:null,  resources:[{title:'Graph Algorithms',url:'https://www.youtube.com/watch?v=YTtpfjkUrvE',type:'video',duration:'4h'}] },
+          { day:9,  title:'Dynamic Programming',     type:'topic',   skills:['DP','Memoization'],           mini_project:'Climbing Stairs, House Robber, Coin Change', project_brief:null, resources:[{title:'DP NeetCode',url:'https://www.youtube.com/watch?v=oBt53YbR9Kk',type:'video',duration:'3h'}] },
+          { day:10, title:'Mock Interview Practice', type:'project', skills:['Problem Solving'],            mini_project:'Solve 3 mediums in 90 minutes',           project_brief:'PROJECT 3: LeetCode Tracker. Track solved problems by difficulty, streak, weekly goals.',  resources:[{title:'Interview Tips',url:'https://www.youtube.com/watch?v=qc1owf2-ovU',type:'video',duration:'30min'}] },
+        ],
+        aiml: [
+          { day:1,  title:'Python for Data Science', type:'topic',   skills:['Python','NumPy','Pandas'],    mini_project:'Analyze student dataset with Pandas',     project_brief:null,  resources:[{title:'Python Full Course',url:'https://www.youtube.com/watch?v=eWRfhZUzrAc',type:'video',duration:'4h'}] },
+          { day:2,  title:'Statistics',              type:'topic',   skills:['Mean','Variance'],            mini_project:'Statistical analysis on real dataset',    project_brief:null,  resources:[{title:'Stats for ML',url:'https://www.youtube.com/watch?v=xxpc-HPKN28',type:'video',duration:'2h'}] },
+          { day:3,  title:'Data Visualization',      type:'topic',   skills:['Matplotlib','Seaborn'],       mini_project:'Visualize sales data with charts',        project_brief:null,  resources:[{title:'Matplotlib Tutorial',url:'https://www.youtube.com/watch?v=UO98lJQ3QGI',type:'video',duration:'1h'}] },
+          { day:4,  title:'ML Fundamentals',         type:'project', skills:['Supervised','Features'],      mini_project:'Train first ML model on Titanic',         project_brief:'PROJECT 1: Grade Predictor. Predict grades from attendance. Streamlit app. Deploy on HuggingFace.',  resources:[{title:'ML Crash Course',url:'https://www.youtube.com/watch?v=GwIo3gDZCVQ',type:'video',duration:'2h'}] },
+          { day:5,  title:'Regression',              type:'topic',   skills:['Linear Regression','Sklearn']  ,mini_project:'Predict house prices',                 project_brief:null,  resources:[{title:'Sklearn Tutorial',url:'https://www.youtube.com/watch?v=0Lt9w-BxKFQ',type:'video',duration:'2h'}] },
+          { day:6,  title:'Neural Networks',         type:'topic',   skills:['Layers','Backprop'],          mini_project:'Build XOR neural network',                project_brief:null,  resources:[{title:'Neural Networks',url:'https://www.youtube.com/watch?v=aircAruvnKk',type:'video',duration:'2h'}] },
+          { day:7,  title:'Deep Learning PyTorch',   type:'project', skills:['PyTorch','Training'],         mini_project:'Train MNIST classifier',                  project_brief:'PROJECT 2: Image Classifier. Upload image and AI identifies it. Pre-trained ResNet. Deploy on HuggingFace.',  resources:[{title:'PyTorch Course',url:'https://www.youtube.com/watch?v=c36lUUr864M',type:'video',duration:'3h'}] },
+          { day:8,  title:'NLP and Transformers',    type:'topic',   skills:['NLP','BERT','HuggingFace'],   mini_project:'Build sentiment analyzer',                project_brief:null,  resources:[{title:'NLP Tutorial',url:'https://www.youtube.com/watch?v=X2vAabgKiuM',type:'video',duration:'2h'}] },
+          { day:9,  title:'LLMs and RAG',            type:'project', skills:['RAG','LangChain'],            mini_project:'Build PDF chatbot',                       project_brief:'PROJECT 3: AI Study Assistant. Upload PDF, ask questions, AI answers. RAG plus Gemini API.',  resources:[{title:'RAG Tutorial',url:'https://www.youtube.com/watch?v=sVcwVQRHIc8',type:'video',duration:'2h'}] },
+          { day:10, title:'MLOps Deployment',        type:'topic',   skills:['FastAPI','Docker'],           mini_project:'Deploy ML model as REST API',             project_brief:null,  resources:[{title:'FastAPI for ML',url:'https://www.youtube.com/watch?v=GN5T_5rE1jo',type:'video',duration:'1h'}] },
+        ],
+        devops: [
+          { day:1, title:'Linux and Shell',          type:'topic',   skills:['Linux','Bash'],               mini_project:'Write 5 automation scripts',              project_brief:null,  resources:[{title:'Linux Course',url:'https://www.youtube.com/watch?v=sWbUDq4S6Y8',type:'video',duration:'2h'}] },
+          { day:2, title:'Git and GitHub',           type:'topic',   skills:['Git','Branching'],            mini_project:'Setup git workflow for project',          project_brief:null,  resources:[{title:'Git Course',url:'https://www.youtube.com/watch?v=RGOj5yH7evk',type:'video',duration:'2h'}] },
+          { day:3, title:'Docker',                   type:'topic',   skills:['Docker','Containers'],        mini_project:'Dockerize a Node.js app',                 project_brief:null,  resources:[{title:'Docker Tutorial',url:'https://www.youtube.com/watch?v=fqMOX6JJhGo',type:'video',duration:'2h'}] },
+          { day:4, title:'Kubernetes',               type:'project', skills:['K8s','Pods','Services'],      mini_project:'Deploy app on local K8s',                 project_brief:'PROJECT 1: Dockerized Microservices. 3 services with Docker Compose. Push to DockerHub.',  resources:[{title:'Kubernetes Course',url:'https://www.youtube.com/watch?v=X48VuDVv0do',type:'video',duration:'4h'}] },
+          { day:5, title:'AWS Core Services',        type:'topic',   skills:['EC2','S3','Lambda'],          mini_project:'Host static site on S3',                  project_brief:null,  resources:[{title:'AWS Course',url:'https://www.youtube.com/watch?v=NhDYbskXRgc',type:'video',duration:'3h'}] },
+          { day:6, title:'CI CD Pipelines',          type:'topic',   skills:['GitHub Actions','YAML'],      mini_project:'Setup auto-deploy pipeline',              project_brief:null,  resources:[{title:'GitHub Actions',url:'https://www.youtube.com/watch?v=R8_veQiYBjI',type:'video',duration:'1h'}] },
+          { day:7, title:'Infrastructure as Code',   type:'project', skills:['Terraform','Ansible'],        mini_project:'Provision AWS with Terraform',            project_brief:'PROJECT 2: Full DevOps Pipeline. Code push triggers Docker build and AWS deploy.',  resources:[{title:'Terraform Tutorial',url:'https://www.youtube.com/watch?v=SLB_c_ayRMo',type:'video',duration:'2h'}] },
+        ],
+        android: [
+          { day:1, title:'Kotlin Fundamentals',      type:'topic',   skills:['Kotlin','Null Safety'],       mini_project:'Build Kotlin calculator',                 project_brief:null,  resources:[{title:'Kotlin Course',url:'https://www.youtube.com/watch?v=F9UC9DY-vIU',type:'video',duration:'2.5h'}] },
+          { day:2, title:'Jetpack Compose',          type:'topic',   skills:['Compose','State'],            mini_project:'Build counter in Compose',                project_brief:null,  resources:[{title:'Compose Tutorial',url:'https://www.youtube.com/watch?v=cDabx3SjuOY',type:'video',duration:'2h'}] },
+          { day:3, title:'Navigation and MVVM',      type:'topic',   skills:['Navigation','ViewModel'],     mini_project:'Multi-screen app',                        project_brief:null,  resources:[{title:'Android Navigation',url:'https://www.youtube.com/watch?v=IEO2X5IM1cI',type:'video',duration:'1.5h'}] },
+          { day:4, title:'Room Database',            type:'project', skills:['Room','DAO','Entity'],        mini_project:'Notes app with Room',                     project_brief:'PROJECT 1: Notes App. Create edit delete notes. Room DB. Publish to Play Store.',  resources:[{title:'Room Tutorial',url:'https://www.youtube.com/watch?v=bOd3wO0uFr8',type:'video',duration:'1.5h'}] },
+          { day:5, title:'Retrofit Networking',      type:'topic',   skills:['Retrofit','Coroutines'],      mini_project:'News reader app with API',                project_brief:null,  resources:[{title:'Retrofit Tutorial',url:'https://www.youtube.com/watch?v=k2N3EoZI3eU',type:'video',duration:'1.5h'}] },
+          { day:6, title:'Firebase Integration',     type:'topic',   skills:['Firebase','Firestore'],       mini_project:'Add Firebase auth',                       project_brief:null,  resources:[{title:'Firebase Tutorial',url:'https://www.youtube.com/watch?v=jbHfJpoOzkI',type:'video',duration:'2h'}] },
+          { day:7, title:'Publish to Play Store',    type:'project', skills:['Play Console','Release'],     mini_project:'Publish first app',                       project_brief:'PROJECT 2: Social App. Post like comment with Firebase real-time backend.',  resources:[{title:'Play Store Guide',url:'https://www.youtube.com/watch?v=3E_FOJLLMGM',type:'video',duration:'1h'}] },
+        ],
+      };
+
+      const nodes = ROADMAPS[domain] || ROADMAPS['fullstack'];
+
+      // Insert roadmap
+      const { data: newRoadmap, error: rmError } = await supabase
+        .from('roadmaps')
+        .insert({
+          student_id: profile.id,
+          title: `${selectedDomain.name} — Day by Day Roadmap`,
+          domain: domain,
+          status: 'active',
+          total_nodes: nodes.length,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (rmError) {
+        console.error('Roadmap error:', rmError);
+        toast.error('Error: ' + rmError.message, { id: 'save' });
+        setSaving(false);
+        return;
+      }
+
+      // Insert nodes one by one
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const { error: nodeErr } = await supabase
+          .from('roadmap_nodes')
+          .insert({
+            roadmap_id: newRoadmap.id,
+            title: n.title,
+            description: `Day ${n.day}: ${n.mini_project}`,
+            order_index: i,
+            day_number: n.day,
+            type: n.type || 'topic',
+            status: i === 0 ? 'unlocked' : 'locked',
+            skills: Array.isArray(n.skills) ? n.skills : [],
+            resources: Array.isArray(n.resources) ? n.resources : [],
+            estimated_days: 1,
+            mini_project: n.mini_project || '',
+            project_brief: n.project_brief || null,
+            created_at: new Date().toISOString(),
+          });
+
+        if (nodeErr) console.error(`Day ${i+1} error:`, nodeErr);
+      }
+
+      // Refresh profile
+      const { data: fresh } = await supabase
+        .from('profiles').select('*')
+        .eq('id', profile.id).single();
+      if (fresh && setProfile) setProfile(fresh);
+
+      toast.success(
+        `${selectedDomain.name} roadmap ready! ${nodes.length} days 🚀`,
+        { id: 'save' }
+      );
+      await new Promise(r => setTimeout(r, 500));
+      navigate('/student/roadmap');
+
+    } catch(err) {
+      console.error('Error:', err);
+      toast.error('Failed: ' + err.message, { id: 'save' });
+    }
+    setSaving(false);
+  };
+
+
+      const _UNUSED = {
         fullstack: [
           { day:1,  title:'HTML Fundamentals',        skills:['HTML5','Semantic HTML','Forms'],             mini_project:'Build a personal bio page',           project_brief:null, resources:[{title:'HTML Full Course - freeCodeCamp',url:'https://www.youtube.com/watch?v=pQN-pnXPaVg',type:'video',duration:'2h'}] },
           { day:2,  title:'CSS and Flexbox',           skills:['CSS3','Flexbox','Selectors'],                mini_project:'Style your bio page with CSS',        project_brief:null, resources:[{title:'CSS Full Course - freeCodeCamp',url:'https://www.youtube.com/watch?v=OXGznpKZ_sA',type:'video',duration:'2h'}] },
@@ -245,78 +346,6 @@ const DomainExplorer = () => {
         ],
       };
 
-      const nodes = ROADMAPS[domain] || ROADMAPS['fullstack'];
-
-      // Step 6: Insert new roadmap
-      const { data: newRoadmap, error: rmError } = await supabase
-        .from('roadmaps')
-        .insert({
-          student_id: profile.id,
-          title: `${selectedDomain.name} — Day by Day Roadmap`,
-          domain: domain,
-          status: 'active',
-          total_nodes: nodes.length,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (rmError) {
-        console.error('Roadmap create error:', rmError);
-        toast.error('Error creating roadmap: ' + rmError.message, { id: 'save' });
-        setSaving(false);
-        return;
-      }
-
-      // Step 7: Insert nodes ONE BY ONE
-      for (let i = 0; i < nodes.length; i++) {
-        const n = nodes[i];
-        const { error: nodeError } = await supabase
-          .from('roadmap_nodes')
-          .insert({
-            roadmap_id: newRoadmap.id,
-            title: n.title,
-            description: `Day ${n.day}: ${n.mini_project || n.title}`,
-            order_index: i,
-            day_number: n.day,
-            type: n.project_brief ? 'project' : 'topic',
-            status: i === 0 ? 'unlocked' : 'locked',
-            skills: Array.isArray(n.skills) ? n.skills : [],
-            resources: Array.isArray(n.resources) ? n.resources : [],
-            estimated_days: 1,
-            created_at: new Date().toISOString(),
-            ...(n.mini_project ? { mini_project: n.mini_project } : {}),
-            ...(n.project_brief ? { project_brief: n.project_brief } : {}),
-          });
-
-        if (nodeError) {
-          console.error(`Node ${i} error:`, nodeError);
-        }
-      }
-
-      // Step 8: Refresh profile in store
-      const { data: freshProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile.id)
-        .single();
-
-      if (freshProfile && setProfile) setProfile(freshProfile);
-
-      toast.success(
-        `${selectedDomain.name} roadmap ready! ${nodes.length} days`,
-        { id: 'save' }
-      );
-
-      await new Promise(r => setTimeout(r, 800));
-      navigate('/student/roadmap');
-
-    } catch(err) {
-      console.error('saveDomainAndTimeline error:', err);
-      toast.error('Failed: ' + err.message, { id: 'save' });
-    }
-    setSaving(false);
-  };
 
   return (
     <div className="min-h-screen bg-dark-900 p-5 md:p-8">
