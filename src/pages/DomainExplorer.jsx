@@ -141,11 +141,10 @@ const DomainExplorer = () => {
         // Delete learning_progress by NODE ID (not roadmap_id)
         if (oldNodes && oldNodes.length > 0) {
           const oldNodeIds = oldNodes.map(n => n.id);
-          const { error: lpError } = await supabase
+          await supabase
             .from('learning_progress')
             .delete()
             .in('node_id', oldNodeIds);
-          if (lpError) console.error('LP delete error:', lpError);
         }
 
         // Delete nodes
@@ -277,16 +276,16 @@ const DomainExplorer = () => {
           .insert({
             roadmap_id: newRoadmap.id,
             title: n.title,
-            description: `Day ${n.day}: ${n.mini_project}`,
+            description: `Day ${n.day}: ${n.mini_project || n.title}`,
             order_index: i,
             day_number: n.day,
             status: i === 0 ? 'unlocked' : 'locked',
             skills: n.skills || [],
             resources: n.resources || [],
-            mini_project: n.mini_project || '',
-            project_brief: n.project_brief || null,
             estimated_days: 1,
             created_at: new Date().toISOString(),
+            ...(n.mini_project ? { mini_project: n.mini_project } : {}),
+            ...(n.project_brief ? { project_brief: n.project_brief } : {}),
           });
 
         if (nodeError) {
