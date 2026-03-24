@@ -279,6 +279,7 @@ const DomainExplorer = () => {
             description: `Day ${n.day}: ${n.mini_project || n.title}`,
             order_index: i,
             day_number: n.day,
+            type: n.project_brief ? 'project' : 'topic',
             status: i === 0 ? 'unlocked' : 'locked',
             skills: Array.isArray(n.skills) ? n.skills : [],
             resources: Array.isArray(n.resources) ? n.resources : [],
