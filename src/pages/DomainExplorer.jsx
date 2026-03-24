@@ -29,70 +29,177 @@ const DomainExplorer = () => {
     }
   };
 
+  const DOMAIN_ROADMAPS = {
+    fullstack: [
+      { title: 'HTML & CSS Foundations',      description: 'Build semantic HTML pages and style with CSS flexbox and grid.', skills: ['HTML5','CSS3','Flexbox'], day: 1,  project_brief: 'Build a personal landing page', resources: 'MDN Web Docs, freeCodeCamp HTML/CSS' },
+      { title: 'JavaScript Fundamentals',     description: 'Variables, functions, loops, arrays, objects, DOM manipulation.', skills: ['JavaScript','DOM','ES6'], day: 2,  project_brief: 'Build an interactive quiz app', resources: 'javascript.info, Eloquent JavaScript' },
+      { title: 'JavaScript Advanced',         description: 'Promises, async/await, fetch API, closures, prototypes.', skills: ['Async JS','Fetch','Closures'], day: 3,  project_brief: 'Weather app using Open-Meteo API', resources: 'javascript.info advanced, Kyle Simpson YDKJS' },
+      { title: 'React Basics',                description: 'Components, JSX, props, state, event handling.', skills: ['React','JSX','useState'], day: 4,  project_brief: 'Todo app with React', resources: 'React official docs, Scrimba React course' },
+      { title: 'React Hooks & State Mgmt',    description: 'useEffect, useContext, custom hooks, Zustand basics.', skills: ['useEffect','useContext','Zustand'], day: 5,  project_brief: 'Notes app with context', resources: 'React hooks docs, Zustand GitHub' },
+      { title: 'Tailwind CSS & UI Design',    description: 'Utility-first CSS, responsive design, dark mode, animations.', skills: ['Tailwind','Responsive Design'], day: 6,  project_brief: 'Redesign your landing page with Tailwind', resources: 'Tailwind docs, Tailwind UI examples' },
+      { title: 'Node.js & Express',           description: 'Backend basics: HTTP, REST APIs, middleware, routing.', skills: ['Node.js','Express','REST'], day: 7,  project_brief: 'REST API for a blog with CRUD', resources: 'Node.js docs, Express docs' },
+      { title: 'Databases: SQL & PostgreSQL', description: 'Tables, queries, joins, indexes, basic schema design.', skills: ['SQL','PostgreSQL','Joins'], day: 8,  project_brief: 'Schema design for a social app', resources: 'PostgreSQL tutorial, Mode SQL tutorial' },
+      { title: 'Supabase & Auth',             description: 'User auth, row-level security, real-time subscriptions.', skills: ['Supabase','Auth','RLS'], day: 9,  project_brief: 'Add auth to your blog API', resources: 'Supabase docs, Supabase YouTube' },
+      { title: 'Full-Stack Project',          description: 'Combine React frontend + Node/Supabase backend into one app.', skills: ['Full-Stack','Deploy','Vite'], day: 10, project_brief: 'Job board with auth, post, apply', resources: 'Vercel deploy guide, Railway.app' },
+      { title: 'Git & GitHub Workflow',       description: 'Branching, pull requests, GitHub Actions basics, code review.', skills: ['Git','GitHub','CI/CD'], day: 11, project_brief: 'Add GitHub Actions to your project', resources: 'Pro Git book, GitHub Actions docs' },
+      { title: 'Testing Basics',              description: 'Unit tests with Vitest, integration tests, TDD mindset.', skills: ['Vitest','Testing','TDD'], day: 12, project_brief: 'Write tests for your API', resources: 'Vitest docs, Kent C Dodds blog' },
+      { title: 'Performance & SEO',           description: 'Core Web Vitals, lazy loading, code splitting, meta tags.', skills: ['Performance','SEO','Lighthouse'], day: 13, project_brief: 'Audit and optimize your app', resources: 'web.dev, Lighthouse docs' },
+      { title: 'TypeScript Fundamentals',     description: 'Types, interfaces, generics, migrating a JS project.', skills: ['TypeScript','Interfaces','Generics'], day: 14, project_brief: 'Migrate todo app to TypeScript', resources: 'TypeScript handbook' },
+      { title: 'Deploy & Go Live',            description: 'Vercel, Railway, env vars, custom domain, production checklist.', skills: ['Vercel','Railway','DevOps'], day: 15, project_brief: 'Deploy full-stack app to production', resources: 'Vercel docs, Railway docs' },
+    ],
+    cybersecurity: [
+      { title: 'Networking & Protocols',      description: 'TCP/IP, DNS, HTTP/S, OSI model, Wireshark basics.', skills: ['Networking','TCP/IP','Wireshark'], day: 1, project_brief: 'Capture and analyze HTTP traffic', resources: 'Professor Messer, TryHackMe Networking' },
+      { title: 'Linux Fundamentals',          description: 'Shell commands, file permissions, processes, scripting basics.', skills: ['Linux','Bash','Permissions'], day: 2, project_brief: 'Write a bash script to audit users', resources: 'OverTheWire Bandit, Linux Journey' },
+      { title: 'Web Security Basics',         description: 'OWASP Top 10, XSS, SQL injection, CSRF, Burp Suite intro.', skills: ['OWASP','XSS','SQLi'], day: 3, project_brief: 'Find and exploit DVWA vulnerabilities', resources: 'OWASP Testing Guide, PortSwigger Web Academy' },
+      { title: 'Cryptography',               description: 'Symmetric, asymmetric, hashing, TLS, PKI, practical crypto.', skills: ['AES','RSA','TLS','Hashing'], day: 4, project_brief: 'Implement AES encrypt/decrypt in Python', resources: 'CryptoHack, Cryptopals challenges' },
+      { title: 'Ethical Hacking & CTF',      description: 'Enumeration, scanning, exploitation, privilege escalation.', skills: ['Nmap','Metasploit','CTF'], day: 5, project_brief: 'Root a TryHackMe Easy box', resources: 'TryHackMe, HackTheBox, IppSec YouTube' },
+      { title: 'Security Tools & Reporting', description: 'Nessus/OpenVAS, pentest reports, responsible disclosure.', skills: ['Nessus','Reporting','CVSS'], day: 6, project_brief: 'Write a vulnerability assessment report', resources: 'PTES standard, CVE database' },
+      { title: 'Incident Response & Blue Team', description: 'SIEM, log analysis, threat hunting, IR playbooks.', skills: ['SIEM','Splunk','IR'], day: 7, project_brief: 'Analyze a simulated breach log', resources: 'Splunk BOTS, BlueTeamLabs' },
+    ],
+    dsa: [
+      { title: 'Arrays & Strings',            description: 'Two pointers, sliding window, prefix sums, string manipulation.', skills: ['Arrays','Two Pointers','Strings'], day: 1,  project_brief: 'Solve 5 LeetCode easy array problems', resources: 'NeetCode, LeetCode study plan' },
+      { title: 'Linked Lists',                description: 'Singly, doubly, fast-slow pointers, reversal, cycle detection.', skills: ['LinkedList','Pointers'], day: 2,  project_brief: 'Implement linked list from scratch', resources: 'Striver DSA, NeetCode' },
+      { title: 'Stacks & Queues',             description: 'Monotonic stack, deque, LRU cache, valid parentheses.', skills: ['Stack','Queue','Monotonic'], day: 3,  project_brief: 'Implement a browser back/forward history', resources: 'NeetCode, Abdul Bari' },
+      { title: 'Trees & BST',                 description: 'DFS, BFS, inorder/preorder/postorder, BST operations.', skills: ['Trees','DFS','BFS','BST'], day: 4,  project_brief: 'Implement BST with insert/search/delete', resources: 'Striver Tree series, NeetCode Trees' },
+      { title: 'Graphs',                      description: 'Adjacency list, BFS, DFS, connected components, topological sort.', skills: ['Graph','BFS','DFS','Topo'], day: 5,  project_brief: 'Solve number of islands problem', resources: 'NeetCode Graphs, William Fiset' },
+      { title: 'Heaps & Priority Queues',     description: 'Min/max heap, heap sort, K-closest, median finder.', skills: ['Heap','PriorityQueue'], day: 6,  project_brief: 'Implement heap sort', resources: 'NeetCode Heap, GFG Heap' },
+      { title: 'Dynamic Programming I',       description: 'Memoization, tabulation, 1D DP: fibonacci, coin change, climbing stairs.', skills: ['DP','Memoization'], day: 7,  project_brief: 'Solve 3 classic 1D DP problems', resources: 'Striver DP series, NeetCode DP' },
+      { title: 'Dynamic Programming II',      description: '2D DP: grid paths, subset sum, LCS, knapsack.', skills: ['2D DP','Knapsack','LCS'], day: 8,  project_brief: 'Solve longest common subsequence', resources: 'Striver DP, Aditya Verma DP' },
+      { title: 'Sorting & Searching',         description: 'QuickSort, MergeSort, binary search on answer, search in rotated.', skills: ['Sorting','Binary Search'], day: 9,  project_brief: 'Implement merge sort, solve binary search variants', resources: 'Striver Sorting, NeetCode Binary Search' },
+      { title: 'Advanced Topics & Mock',      description: 'Tries, segment trees, disjoint sets, system design basics, mock interview.', skills: ['Trie','DSU','System Design'], day: 10, project_brief: 'Mock interview: 2 medium problems in 45 min', resources: 'Striver SDE Sheet, LeetCode Mock' },
+    ],
+    aiml: [
+      { title: 'Python for ML',               description: 'NumPy, Pandas, Matplotlib, data cleaning, EDA.', skills: ['Python','NumPy','Pandas'], day: 1,  project_brief: 'EDA on Titanic dataset', resources: 'Kaggle Python course, CS50 Python' },
+      { title: 'Statistics & Probability',    description: 'Mean/variance, distributions, hypothesis testing, correlation.', skills: ['Statistics','Probability'], day: 2,  project_brief: 'Statistical analysis on IPL dataset', resources: 'StatQuest, Khan Academy Stats' },
+      { title: 'ML Fundamentals',             description: 'Supervised/unsupervised learning, bias-variance, train-test split.', skills: ['ML','Scikit-learn','Evaluation'], day: 3,  project_brief: 'Predict house prices with linear regression', resources: 'Andrew Ng ML course, Scikit-learn docs' },
+      { title: 'Classification Algorithms',   description: 'Logistic regression, decision trees, random forests, SVM, KNN.', skills: ['Classification','RandomForest','SVM'], day: 4,  project_brief: 'Spam email classifier', resources: 'Scikit-learn docs, StatQuest' },
+      { title: 'Deep Learning Basics',        description: 'Neural networks, backprop, activation functions, PyTorch/Keras intro.', skills: ['Deep Learning','PyTorch','Keras'], day: 5,  project_brief: 'MNIST digit classifier', resources: 'fast.ai, 3Blue1Brown Neural Networks' },
+      { title: 'NLP Fundamentals',            description: 'Text preprocessing, TF-IDF, word embeddings, sentiment analysis.', skills: ['NLP','NLTK','Embeddings'], day: 6,  project_brief: 'Twitter sentiment analysis', resources: 'Hugging Face NLP course, NLTK book' },
+      { title: 'CNNs & Image Classification', description: 'Convolutional layers, pooling, transfer learning, data augmentation.', skills: ['CNN','Transfer Learning','OpenCV'], day: 7,  project_brief: 'Classify cats vs dogs with transfer learning', resources: 'fast.ai vision, PyTorch CNN tutorial' },
+      { title: 'Model Evaluation & Tuning',   description: 'Cross-validation, GridSearch, learning curves, feature importance.', skills: ['Tuning','CrossVal','MLflow'], day: 8,  project_brief: 'Hyperparameter tune your best model', resources: 'Scikit-learn model selection, MLflow docs' },
+      { title: 'LLMs & Generative AI',        description: 'Transformers architecture, prompt engineering, RAG basics, LangChain intro.', skills: ['LLM','Transformers','LangChain'], day: 9,  project_brief: 'Build a Q&A bot with LangChain', resources: 'Hugging Face course, LangChain docs' },
+      { title: 'ML Project End-to-End',       description: 'Problem framing, data pipeline, model, API, deployment on Streamlit/FastAPI.', skills: ['MLOps','FastAPI','Streamlit'], day: 10, project_brief: 'Deploy a sentiment analysis API', resources: 'Streamlit docs, FastAPI docs' },
+    ],
+    devops: [
+      { title: 'Linux & Shell Scripting',     description: 'Core Linux commands, bash scripting, cron jobs, permissions.', skills: ['Linux','Bash','Cron'], day: 1, project_brief: 'Write a bash monitoring script', resources: 'Linux Journey, The Linux Command Line book' },
+      { title: 'Networking Basics',           description: 'IP, DNS, HTTP, load balancers, firewalls, VPCs.', skills: ['Networking','DNS','HTTP'], day: 2, project_brief: 'Set up a local DNS with /etc/hosts', resources: 'Professor Messer, AWS Networking docs' },
+      { title: 'Docker & Containers',         description: 'Images, containers, Dockerfile, docker-compose, volumes, networking.', skills: ['Docker','Containers','Compose'], day: 3, project_brief: 'Containerize a Node.js + PostgreSQL app', resources: 'Docker docs, TechWorld with Nana' },
+      { title: 'Kubernetes Basics',           description: 'Pods, services, deployments, namespaces, ConfigMaps, Helm basics.', skills: ['Kubernetes','kubectl','Helm'], day: 4, project_brief: 'Deploy containerized app on Minikube', resources: 'Kubernetes docs, KodeKloud K8s' },
+      { title: 'CI/CD with GitHub Actions',   description: 'Pipelines, actions, secrets, build-test-deploy workflows.', skills: ['CI/CD','GitHub Actions','YAML'], day: 5, project_brief: 'Full CI/CD pipeline for a Node app', resources: 'GitHub Actions docs, TechWorld with Nana' },
+      { title: 'Cloud Basics (AWS/GCP)',      description: 'EC2, S3, IAM, VPC, serverless with Lambda/Cloud Functions.', skills: ['AWS','EC2','S3','Lambda'], day: 6, project_brief: 'Deploy app on EC2 with S3 storage', resources: 'AWS free tier, ACloudGuru basics' },
+      { title: 'Monitoring & Observability',  description: 'Prometheus, Grafana, log aggregation, alerting, SLOs.', skills: ['Prometheus','Grafana','Logging'], day: 7, project_brief: 'Set up Prometheus + Grafana for your app', resources: 'Prometheus docs, Grafana tutorials' },
+    ],
+    android: [
+      { title: 'Kotlin Fundamentals',         description: 'Syntax, null safety, data classes, coroutines, extension functions.', skills: ['Kotlin','Coroutines','Null Safety'], day: 1, project_brief: 'Kotlin console app: student grade calculator', resources: 'Kotlin docs, Kotlin Koans' },
+      { title: 'Android Studio & Layouts',    description: 'Activity, fragments, XML layouts, ConstraintLayout, RecyclerView.', skills: ['Android Studio','XML Layouts','RecyclerView'], day: 2, project_brief: 'Build a contact list app', resources: 'Android developer docs, Philipp Lackner YouTube' },
+      { title: 'Jetpack Compose',             description: 'Composables, state, theming, navigation, side effects.', skills: ['Jetpack Compose','State','Navigation'], day: 3, project_brief: 'Rebuild contact list in Compose', resources: 'Compose docs, Google Compose codelab' },
+      { title: 'ViewModel & LiveData',        description: 'MVVM architecture, ViewModel, LiveData, StateFlow, data binding.', skills: ['ViewModel','MVVM','StateFlow'], day: 4, project_brief: 'Notes app with ViewModel', resources: 'Android architecture guide, Philipp Lackner' },
+      { title: 'Room Database',               description: 'Entities, DAOs, migrations, flows from Room.', skills: ['Room','SQLite','DAO'], day: 5, project_brief: 'Persist notes to Room database', resources: 'Room docs, Android codelab' },
+      { title: 'Networking with Retrofit',    description: 'REST calls, OkHttp, Coroutines, JSON parsing, error handling.', skills: ['Retrofit','OkHttp','REST'], day: 6, project_brief: 'News reader app from NewsAPI', resources: 'Retrofit docs, Philipp Lackner Retrofit' },
+      { title: 'Publish & Play Store',        description: 'Signing APK, Play Console, store listing, in-app review, crashlytics.', skills: ['Play Store','Firebase','APK'], day: 7, project_brief: 'Publish your notes app to Play Store', resources: 'Play Console help, Firebase Crashlytics' },
+    ],
+  };
+
   const saveDomainAndTimeline = async () => {
     if (!selectedDomain || !selectedTimeline) return;
     setSaving(true);
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({
-        domain_id: selectedDomain.id,
-        timeline: selectedTimeline,
-        timeline_start_date: new Date().toISOString(),
-        target_role: selectedDomain.jobRoles[0],
-      })
-      .eq('id', profile.id)
-      .select()
-      .single();
+    try {
+      // 1. Update profile
+      const { data: updatedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          domain_id: selectedDomain.id,
+          timeline: selectedTimeline,
+          timeline_start_date: new Date().toISOString(),
+          target_role: selectedDomain.jobRoles?.[0] || selectedDomain.name,
+        })
+        .eq('id', profile.id)
+        .select()
+        .single();
 
-    if (error) {
-      toast.error('Failed to save: ' + error.message);
-      setSaving(false);
-      return;
-    }
+      if (profileError) {
+        toast.error('Failed to save profile: ' + profileError.message);
+        setSaving(false);
+        return;
+      }
 
-    if (data) setProfile(data);
+      if (updatedProfile) setProfile(updatedProfile);
 
-    // Delete old roadmap and generate new one for this domain
-    const { data: oldRoadmaps } = await supabase
-      .from('roadmaps')
-      .select('id')
-      .eq('student_id', profile.id);
+      // 2. Get old roadmaps
+      const { data: oldRoadmaps } = await supabase
+        .from('roadmaps')
+        .select('id')
+        .eq('student_id', profile.id);
 
-    if (oldRoadmaps?.length > 0) {
-      const roadmapIds = oldRoadmaps.map(r => r.id);
-      await supabase.from('roadmap_nodes').delete().in('roadmap_id', roadmapIds);
-      await supabase.from('roadmaps').delete().eq('student_id', profile.id);
-    }
+      if (oldRoadmaps?.length > 0) {
+        const roadmapIds = oldRoadmaps.map(r => r.id);
 
-    // Create new roadmap for selected domain
-    const { data: newRoadmap } = await supabase
-      .from('roadmaps')
-      .insert({
-        student_id: profile.id,
-        title: `${selectedDomain.name} Roadmap`,
-        domain: selectedDomain.id,
-        status: 'active',
-      })
-      .select()
-      .single();
+        // 3. Cascading delete: learning_progress first, then nodes, then roadmaps
+        await supabase.from('learning_progress').delete().in('roadmap_id', roadmapIds);
+        await supabase.from('roadmap_nodes').delete().in('roadmap_id', roadmapIds);
+        await supabase.from('roadmaps').delete().in('id', roadmapIds);
 
-    if (newRoadmap) {
-      const nodes = selectedDomain.roadmapPreview.map((title, i) => ({
+        // 4. Also delete stale tasks tied to old roadmap nodes
+        await supabase.from('tasks')
+          .delete()
+          .eq('student_id', profile.id)
+          .not('due_date', 'is', null);
+      }
+
+      // 5. Wait for deletes to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 6. Create new roadmap
+      const { data: newRoadmap, error: roadmapError } = await supabase
+        .from('roadmaps')
+        .insert({
+          student_id: profile.id,
+          title: `${selectedDomain.name} Roadmap`,
+          domain: selectedDomain.id,
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (roadmapError || !newRoadmap) {
+        toast.error('Failed to create roadmap.');
+        setSaving(false);
+        return;
+      }
+
+      // 7. Build day-by-day nodes from inline domain roadmap or fallback
+      const domainNodes = DOMAIN_ROADMAPS[selectedDomain.id] || DOMAIN_ROADMAPS['fullstack'];
+
+      const nodes = domainNodes.map((n, i) => ({
         roadmap_id: newRoadmap.id,
-        title,
-        description: `Master ${title} as part of your ${selectedDomain.name} journey`,
+        title: n.title,
+        description: n.description,
         order_index: i,
+        day_number: n.day,
         status: i === 0 ? 'unlocked' : 'locked',
-        skills: selectedDomain.skills.slice(0, 3),
-        estimated_days: TIMELINES[selectedTimeline].nodeUnlockDays,
+        skills: n.skills,
+        estimated_days: 1,
+        project_brief: n.project_brief,
+        resources: n.resources,
       }));
-      await supabase.from('roadmap_nodes').insert(nodes);
-    }
 
-    toast.success(`${selectedDomain.name} roadmap generated! 🚀`);
-    setSaving(false);
-    navigate('/student/roadmap');
+      const { error: nodesError } = await supabase.from('roadmap_nodes').insert(nodes);
+
+      if (nodesError) {
+        toast.error('Failed to create nodes: ' + nodesError.message);
+        setSaving(false);
+        return;
+      }
+
+      toast.success(`${selectedDomain.name} roadmap generated! Let's go 🚀`);
+      setSaving(false);
+      navigate('/student/roadmap');
+    } catch (err) {
+      console.error('saveDomainAndTimeline error:', err);
+      toast.error('Something went wrong. Please try again.');
+      setSaving(false);
+    }
   };
 
   return (

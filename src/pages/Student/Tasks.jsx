@@ -122,6 +122,7 @@ const Tasks = () => {
   };
 
   const fetchTasks = async () => {
+    if (!profile?.id) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data, error } = await supabase
