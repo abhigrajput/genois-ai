@@ -1,126 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Github, ExternalLink, Edit, MapPin,
-         GraduationCap, Shield, Star, Zap,
-         TrendingUp, Calendar, Award, Target,
-         CheckCircle, AlertCircle } from 'lucide-react';
+import { Github, ExternalLink, Edit,
+         MapPin, GraduationCap, Shield,
+         Star, Zap, TrendingUp, Calendar,
+         Award, Target, CheckCircle,
+         AlertCircle, Save, X, Plus } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
-import { calculateDetailedScore, getJobReadiness } from '../../lib/scoring';
 import useStore from '../../store/useStore';
 import toast from 'react-hot-toast';
-import { AreaChart, Area, XAxis, YAxis,
-         Tooltip, ResponsiveContainer } from 'recharts';
-import TrustPanel from '../../components/ui/TrustPanel';
-import JobReadinessMeter from '../../components/ui/JobReadinessMeter';
 
-const BADGES = [
-  {
-    id: 'consistent',
-    name: 'Consistent',
-    icon: '🔥',
-    description: '7-day streak',
-    rarity: 'rare',
-    color: '#FF6B6B',
-    check: (data) => (data.streak || 0) >= 7,
-  },
-  {
-    id: 'fast_learner',
-    name: 'Fast Learner',
-    icon: '⚡',
-    description: 'Passed 3 tests in first week',
-    rarity: 'rare',
-    color: '#FFB347',
-    check: (data) => (data.passedTests || 0) >= 3,
-  },
-  {
-    id: 'project_builder',
-    name: 'Project Builder',
-    icon: '💻',
-    description: 'Added 2+ projects',
-    rarity: 'epic',
-    color: '#7B61FF',
-    check: (data) => (data.totalProjects || 0) >= 2,
-  },
-  {
-    id: 'high_score',
-    name: 'High Score',
-    icon: '🏆',
-    description: 'Genois Score above 300',
-    rarity: 'epic',
-    color: '#FFD700',
-    check: (data) => (data.score || 0) >= 300,
-  },
-  {
-    id: 'github_verified',
-    name: 'Verified Dev',
-    icon: '✅',
-    description: 'GitHub verified project',
-    rarity: 'epic',
-    color: '#00FF94',
-    check: (data) => (data.verifiedProjects || 0) >= 1,
-  },
-  {
-    id: 'first_step',
-    name: 'First Step',
-    icon: '🎯',
-    description: 'Completed first task',
-    rarity: 'common',
-    color: '#4A9EFF',
-    check: (data) => (data.completedTasks || 0) >= 1,
-  },
-  {
-    id: 'roadmap_runner',
-    name: 'Roadmap Runner',
-    icon: '🗺️',
-    description: 'Completed 3 nodes',
-    rarity: 'rare',
-    color: '#00D68F',
-    check: (data) => (data.completedNodes || 0) >= 3,
-  },
-  {
-    id: 'elite',
-    name: 'Elite',
-    icon: '👑',
-    description: 'Genois Score above 600',
-    rarity: 'legendary',
-    color: '#FFD700',
-    check: (data) => (data.score || 0) >= 600,
-  },
+const BADGES_CONFIG = [
+  { id:'first_step',      icon:'🎯', name:'First Step',      desc:'Completed first task',        rarity:'common',    color:'#4A9EFF', check:(d)=>d.tasks>=1 },
+  { id:'consistent',      icon:'🔥', name:'Consistent',      desc:'7-day streak',                rarity:'rare',      color:'#FF6B6B', check:(d)=>d.streak>=7 },
+  { id:'fast_learner',    icon:'⚡', name:'Fast Learner',    desc:'Passed 3 tests',              rarity:'rare',      color:'#FFB347', check:(d)=>d.tests>=3 },
+  { id:'project_builder', icon:'💻', name:'Project Builder', desc:'Added 2+ projects',           rarity:'epic',      color:'#7B61FF', check:(d)=>d.projects>=2 },
+  { id:'high_score',      icon:'🏆', name:'High Score',      desc:'Score above 300',             rarity:'epic',      color:'#FFD700', check:(d)=>d.score>=300 },
+  { id:'verified_dev',    icon:'✅', name:'Verified Dev',    desc:'GitHub verified project',     rarity:'epic',      color:'#00FF94', check:(d)=>d.verified>=1 },
+  { id:'roadmap_runner',  icon:'🗺️', name:'Roadmap Runner',  desc:'Completed 3 nodes',           rarity:'rare',      color:'#00D68F', check:(d)=>d.nodes>=3 },
+  { id:'elite',           icon:'👑', name:'Elite',           desc:'Score above 600',             rarity:'legendary', color:'#FFD700', check:(d)=>d.score>=600 },
 ];
 
-const getTierConfig = (score) => {
-  if (score >= 801) return { label: 'Elite', color: '#FFD700', glow: 'rgba(255,215,0,0.3)' };
-  if (score >= 601) return { label: 'Advanced', color: '#7B61FF', glow: 'rgba(123,97,255,0.3)' };
-  if (score >= 401) return { label: 'Proficient', color: '#00FF94', glow: 'rgba(0,255,148,0.3)' };
-  if (score >= 201) return { label: 'Developing', color: '#4A9EFF', glow: 'rgba(74,158,255,0.3)' };
-  return { label: 'Beginner', color: '#666', glow: 'rgba(102,102,102,0.2)' };
+const RARITY_COLOR = {
+  common:'#666', rare:'#4A9EFF', epic:'#7B61FF', legendary:'#FFD700'
+};
+
+const TIER = (s) => {
+  if (s>=801) return { label:'Elite',      color:'#FFD700', glow:'rgba(255,215,0,0.25)' };
+  if (s>=601) return { label:'Advanced',   color:'#7B61FF', glow:'rgba(123,97,255,0.25)' };
+  if (s>=401) return { label:'Proficient', color:'#00FF94', glow:'rgba(0,255,148,0.25)' };
+  if (s>=201) return { label:'Developing', color:'#4A9EFF', glow:'rgba(74,158,255,0.25)' };
+  return       { label:'Beginner',    color:'#555',    glow:'rgba(85,85,85,0.15)' };
 };
 
 const Profile = () => {
   const { profile, setProfile } = useStore();
-  const [skills, setSkills] = useState([]);
   const [projects, setProjects] = useState([]);
   const [nodes, setNodes] = useState([]);
   const [attempts, setAttempts] = useState([]);
-  const [scoreHistory, setScoreHistory] = useState([]);
-  const [scoreData, setScoreData] = useState(null);
-  const [jobReadiness, setJobReadiness] = useState(null);
-  const [earnedBadges, setEarnedBadges] = useState([]);
-  const [weakTopics, setWeakTopics] = useState([]);
-  const [strongTopics, setStrongTopics] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [recruiterView, setRecruiterView] = useState(false);
   const [addingProject, setAddingProject] = useState(false);
+  const [recruiterView, setRecruiterView] = useState(false);
+  const [earnedBadges, setEarnedBadges] = useState([]);
   const [editForm, setEditForm] = useState({
-    full_name: '', bio: '', github_username: '',
-    target_role: '', college: '', branch: '',
-    graduation_year: '', learning_speed: 'normal',
+    full_name:'', email:'', college:'', year:'',
+    branch:'', phone:'', github_username:'',
+    target_role:'', bio:'', graduation_year:'',
+    study_hours_per_day: 2, learning_speed:'normal',
   });
   const [projectForm, setProjectForm] = useState({
-    title: '', description: '', tech_stack: '',
-    github_url: '', live_url: '',
+    title:'', description:'', tech_stack:'',
+    github_url:'', live_url:'',
   });
 
   useEffect(() => {
@@ -128,223 +60,233 @@ const Profile = () => {
       fetchAll();
       setEditForm({
         full_name: profile.full_name || '',
-        bio: profile.bio || '',
+        email: profile.email || '',
+        college: profile.college || '',
+        year: profile.year || '',
+        branch: profile.branch || '',
+        phone: profile.phone || '',
         github_username: profile.github_username || '',
         target_role: profile.target_role || '',
-        college: profile.college || '',
-        branch: profile.branch || '',
+        bio: profile.bio || '',
         graduation_year: profile.graduation_year || '',
+        study_hours_per_day: profile.study_hours_per_day || 2,
         learning_speed: profile.learning_speed || 'normal',
       });
     }
-  }, [profile]);
+  }, [profile?.id]);
 
   const fetchAll = async () => {
     setLoading(true);
-    const [skillRes, projectRes, nodeRes, attemptRes, historyRes] =
-      await Promise.all([
-        supabase.from('skill_scores').select('*').eq('student_id', profile.id),
-        supabase.from('projects').select('*').eq('student_id', profile.id),
-        supabase.from('roadmap_nodes')
-          .select('*, roadmaps!inner(student_id)')
-          .eq('roadmaps.student_id', profile.id),
-        supabase.from('test_attempts').select('*').eq('student_id', profile.id),
-        supabase.from('score_history').select('*')
-          .eq('student_id', profile.id)
-          .order('recorded_at', { ascending: true })
-          .limit(14),
-      ]);
+    const [projRes, nodeRes, attemptRes, taskRes] = await Promise.all([
+      supabase.from('projects').select('*').eq('student_id', profile.id),
+      supabase.from('roadmap_nodes')
+        .select('*, roadmaps!inner(student_id)')
+        .eq('roadmaps.student_id', profile.id),
+      supabase.from('test_attempts').select('*').eq('student_id', profile.id),
+      supabase.from('tasks').select('id,status').eq('student_id', profile.id),
+    ]);
 
-    const skillData = skillRes.data || [];
-    const projectData = projectRes.data || [];
+    const projData = projRes.data || [];
     const nodeData = nodeRes.data || [];
     const attemptData = attemptRes.data || [];
+    const taskData = taskRes.data || [];
 
-    setSkills(skillData);
-    setProjects(projectData);
+    setProjects(projData);
     setNodes(nodeData);
     setAttempts(attemptData);
+    setTasks(taskData);
 
-    // Score history for graph
-    const history = historyRes.data || [];
-    if (history.length > 0) {
-      setScoreHistory(history.map(h => ({
-        day: new Date(h.recorded_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
-        score: h.score,
-      })));
-    } else {
-      const score = profile.skill_score || 0;
-      setScoreHistory([
-        { day: '7d ago', score: Math.max(0, score - 50) },
-        { day: '6d ago', score: Math.max(0, score - 40) },
-        { day: '5d ago', score: Math.max(0, score - 30) },
-        { day: '4d ago', score: Math.max(0, score - 20) },
-        { day: '3d ago', score: Math.max(0, score - 15) },
-        { day: '2d ago', score: Math.max(0, score - 10) },
-        { day: 'Today', score },
-      ]);
-    }
-
-    // Calculate score
-    const detailed = await calculateDetailedScore(profile.id, supabase);
-    setScoreData(detailed);
-    setJobReadiness(getJobReadiness(detailed, profile, {
-      totalNodes: nodeData.length,
-      completedNodes: nodeData.filter(n => n.status === 'completed').length,
-      verifiedProjects: projectData.filter(p => p.verified).length,
-      totalProjects: projectData.length,
-      totalTests: attemptData.length,
-      passedTests: attemptData.filter(a => a.passed).length,
-      avgTestScore: attemptData.length > 0
-        ? attemptData.reduce((a, t) => a + (t.percentage || 0), 0) / attemptData.length
-        : 0,
-    }));
-
-    // Weak and strong topics
-    const weak = [];
-    const strong = [];
-    skillData.forEach(skill => {
-      if ((skill.score || 0) < 30) weak.push(skill.skill_name);
-      else if ((skill.score || 0) > 60) strong.push(skill.skill_name);
-    });
-    setWeakTopics(weak.slice(0, 3));
-    setStrongTopics(strong.slice(0, 3));
-
-    // Calculate earned badges
-    const completedNodes = nodeData.filter(n => n.status === 'completed').length;
-    const passedTests = attemptData.filter(a => a.passed).length;
-    const verifiedProjects = projectData.filter(p => p.verified).length;
+    // Calculate badges
     const badgeData = {
-      streak: profile.streak_count || 0,
-      passedTests,
-      totalProjects: projectData.length,
-      verifiedProjects,
-      score: Math.round(profile.skill_score || 0),
-      completedTasks: 0,
-      completedNodes,
+      tasks: taskData.filter(t=>t.status==='completed').length,
+      streak: profile?.streak_count || 0,
+      tests: attemptData.filter(a=>a.passed).length,
+      projects: projData.length,
+      score: Math.round(profile?.skill_score || 0),
+      verified: projData.filter(p=>p.verified).length,
+      nodes: nodeData.filter(n=>n.status==='completed').length,
     };
-
-    const { count } = await supabase
-      .from('tasks').select('*', { count: 'exact', head: true })
-      .eq('student_id', profile.id)
-      .eq('status', 'completed');
-    badgeData.completedTasks = count || 0;
-
-    const earned = BADGES.filter(b => b.check(badgeData));
-    setEarnedBadges(earned);
-
+    setEarnedBadges(BADGES_CONFIG.filter(b => b.check(badgeData)));
     setLoading(false);
   };
 
   const saveProfile = async () => {
+    const updates = {
+      full_name: editForm.full_name,
+      email: editForm.email,
+      college: editForm.college,
+      year: editForm.year,
+      branch: editForm.branch,
+      phone: editForm.phone,
+      github_username: editForm.github_username,
+      target_role: editForm.target_role,
+      bio: editForm.bio,
+      graduation_year: editForm.graduation_year
+        ? parseInt(editForm.graduation_year) : null,
+      study_hours_per_day: parseInt(editForm.study_hours_per_day) || 2,
+      learning_speed: editForm.learning_speed || 'normal',
+    };
+
     const { data, error } = await supabase
       .from('profiles')
-      .update({
-          ...editForm,
-          learning_speed: editForm.learning_speed || 'normal',
-          graduation_year: editForm.graduation_year ? parseInt(editForm.graduation_year) : null,
-        })
-      .eq('id', profile.id).select().single();
-    if (!error) { setProfile(data); setEditing(false); toast.success('Profile saved! ✅'); }
-    else toast.error('Failed to save');
+      .update(updates)
+      .eq('id', profile.id)
+      .select().single();
+
+    if (!error && data) {
+      setProfile(data);
+      setEditing(false);
+      toast.success('Profile saved! ✅');
+    } else {
+      toast.error('Save failed: ' + error?.message);
+    }
   };
 
   const addProject = async () => {
-    if (!projectForm.title) { toast.error('Title required'); return; }
+    if (!projectForm.title.trim()) {
+      toast.error('Project title required');
+      return;
+    }
     const { error } = await supabase.from('projects').insert({
       student_id: profile.id,
       title: projectForm.title,
       description: projectForm.description,
-      tech_stack: projectForm.tech_stack.split(',').map(t => t.trim()).filter(Boolean),
+      tech_stack: projectForm.tech_stack
+        .split(',').map(t=>t.trim()).filter(Boolean),
       github_url: projectForm.github_url,
       live_url: projectForm.live_url,
     });
     if (!error) {
       toast.success('Project added! 🚀');
-      setProjectForm({ title:'', description:'', tech_stack:'', github_url:'', live_url:'' });
+      setProjectForm({ title:'', description:'',
+        tech_stack:'', github_url:'', live_url:'' });
       setAddingProject(false);
       fetchAll();
+    } else {
+      toast.error('Failed: ' + error.message);
     }
   };
 
   const verifyGitHub = async (project) => {
-    if (!project.github_url) { toast.error('Add GitHub URL first'); return; }
-    toast.loading('Verifying...', { id: 'v' });
+    if (!project.github_url) {
+      toast.error('Add GitHub URL first');
+      return;
+    }
+    toast.loading('Verifying...', { id:'v' });
     try {
-      const parts = project.github_url.replace('https://github.com/', '').split('/');
+      const parts = project.github_url
+        .replace('https://github.com/','').split('/');
       const [owner, repo] = parts;
-      const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+      if (!owner || !repo) {
+        toast.error('Invalid GitHub URL', { id:'v' });
+        return;
+      }
+      const repoRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`
+      );
       const repoData = await repoRes.json();
-      if (repoData.message === 'Not Found') { toast.error('Repo not found or private', { id: 'v' }); return; }
-      const commitsRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`);
+      if (repoData.message === 'Not Found') {
+        toast.error('Repo not found or private', { id:'v' });
+        return;
+      }
+      const commitsRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`
+      );
       const commits = await commitsRes.json();
       const count = Array.isArray(commits) ? commits.length : 0;
       const verified = count >= 3;
       await supabase.from('projects').update({
         verified,
-        metadata: { commit_count: count, language: repoData.language, stars: repoData.stargazers_count,
-          difficulty: count > 20 ? 'advanced' : count > 8 ? 'intermediate' : 'beginner',
-          verified_at: new Date().toISOString() }
+        metadata: {
+          commit_count: count,
+          language: repoData.language,
+          stars: repoData.stargazers_count,
+          difficulty: count>20?'advanced':count>8?'intermediate':'beginner',
+          verified_at: new Date().toISOString(),
+        }
       }).eq('id', project.id);
-      toast[verified ? 'success' : 'error'](
-        verified ? `✅ Verified! ${count} commits` : `Need 3+ commits. Found ${count}.`,
-        { id: 'v' }
+
+      toast[verified?'success':'error'](
+        verified
+          ? `✅ Verified! ${count} commits · ${repoData.language}`
+          : `Need 3+ commits. Found ${count}.`,
+        { id:'v' }
       );
       fetchAll();
-    } catch { toast.error('Verification failed', { id: 'v' }); }
+    } catch(e) {
+      toast.error('Verification failed', { id:'v' });
+    }
   };
 
   const score = Math.round(profile?.skill_score || 0);
-  const tier = getTierConfig(score);
-  const completedNodes = nodes.filter(n => n.status === 'completed').length;
-  const passedTests = attempts.filter(a => a.passed).length;
+  const tier = TIER(score);
+  const completedNodes = nodes.filter(n=>n.status==='completed').length;
+  const passedTests = attempts.filter(a=>a.passed).length;
+  const completedTasks = tasks.filter(t=>t.status==='completed').length;
   const streak = profile?.streak_count || 0;
-  const currentDay = streak;
-  const totalStudyHours = Math.round(completedNodes * 3 + passedTests * 0.5);
 
-  const SKILL_COLORS = ['','#4A9EFF','#00FF94','#7B61FF','#FFB347','#FFD700'];
-  const rarityColors = { common:'#666', rare:'#4A9EFF', epic:'#7B61FF', legendary:'#FFD700' };
+  // Job readiness calculation
+  const scoreComp = Math.min(30, (score/1000)*30);
+  const roadmapComp = Math.min(30, nodes.length>0 ? (completedNodes/nodes.length)*30 : 0);
+  const projComp = Math.min(20, (projects.filter(p=>p.verified).length*8) + (projects.length*2));
+  const testComp = Math.min(20, attempts.length>0 ? (passedTests/attempts.length)*20 : 0);
+  const jobReady = Math.min(100, Math.round(scoreComp+roadmapComp+projComp+testComp));
+
+  const jobStatus = jobReady>=80 ? { label:'Interview Ready 🏆', color:'#FFD700' }
+    : jobReady>=60 ? { label:'Job Ready ✅', color:'#00FF94' }
+    : jobReady>=30 ? { label:'Learning 📈', color:'#4A9EFF' }
+    : { label:'Beginner 🌱', color:'#7B61FF' };
 
   if (loading) return (
     <DashboardLayout>
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-dark-600 border-t-primary rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-dark-600 border-t-primary rounded-full animate-spin"/>
       </div>
     </DashboardLayout>
   );
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-5">
+      <div className="max-w-4xl mx-auto space-y-4">
 
-        {/* Header actions */}
+        {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold font-heading text-white">
-              Skill Identity 🪪
+            <h1 className="text-2xl font-bold font-heading text-white"
+              style={{ textShadow:'0 0 15px rgba(0,255,148,0.3)' }}>
+              🪪 Skill Identity
             </h1>
             <p className="text-gray-500 text-sm mt-0.5">
-              Your verified skill profile — share instead of resume
+              Your verified profile — share instead of resume
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => setRecruiterView(!recruiterView)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              className="px-3 py-2 rounded-xl text-xs font-semibold transition-all"
               style={{
-                background: recruiterView ? 'rgba(123,97,255,0.2)' : 'rgba(34,34,51,0.5)',
-                color: recruiterView ? '#7B61FF' : '#666',
-                border: `1px solid ${recruiterView ? 'rgba(123,97,255,0.4)' : 'rgba(34,34,51,0.8)'}`,
+                background: recruiterView
+                  ? 'rgba(123,97,255,0.15)' : 'rgba(18,18,26,0.8)',
+                color: recruiterView ? '#7B61FF' : '#555',
+                border: `1px solid ${recruiterView
+                  ? 'rgba(123,97,255,0.35)' : 'rgba(34,34,51,0.5)'}`,
               }}>
               👔 {recruiterView ? 'Recruiter View ON' : 'View as Recruiter'}
             </button>
             <button onClick={() => setEditing(!editing)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{ background:'rgba(0,255,148,0.1)', color:'#00FF94', border:'1px solid rgba(0,255,148,0.3)' }}>
-              <Edit size={13} /> {editing ? 'Cancel' : 'Edit Profile'}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+              style={{ background:'rgba(0,255,148,0.08)', color:'#00FF94', border:'1px solid rgba(0,255,148,0.25)' }}>
+              <Edit size={12}/> {editing ? 'Cancel' : 'Edit Profile'}
             </button>
-            <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/u/${profile?.id}`); toast.success('Link copied! 🔗'); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-dark-700 border border-dark-500 text-gray-300 hover:text-white transition-all">
-              🔗 Share Identity
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `${window.location.origin}/u/${profile?.id}`
+                );
+                toast.success('Profile link copied! 🔗');
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+              style={{ background:'rgba(18,18,26,0.8)', color:'#555', border:'1px solid rgba(34,34,51,0.5)' }}>
+              🔗 Share
             </button>
           </div>
         </div>
@@ -352,138 +294,201 @@ const Profile = () => {
         {/* Recruiter view banner */}
         {recruiterView && (
           <div className="p-4 rounded-xl"
-            style={{ background:'rgba(123,97,255,0.08)', border:'1px solid rgba(123,97,255,0.2)' }}>
+            style={{ background:'rgba(123,97,255,0.06)', border:'1px solid rgba(123,97,255,0.2)' }}>
             <p className="text-xs font-bold text-secondary mb-1">
-              👔 Recruiter View — This is what companies see on Pro plan
+              👔 Recruiter View — What companies see
             </p>
-            <p className="text-xs text-gray-400 italic">
+            <p className="text-xs text-gray-400 italic leading-relaxed">
               "{profile?.full_name || 'Student'} is a {tier.label.toLowerCase()} engineer
-              {strongTopics.length > 0 ? ` strong in ${strongTopics.join(', ')}` : ''}.
-              Score {score}/1000 built from real daily activity — not a certificate.
-              {projects.filter(p => p.verified).length > 0 ? ` ${projects.filter(p => p.verified).length} GitHub-verified project(s).` : ''}
-              {streak > 7 ? ` ${streak}-day consistency streak.` : ''}"
+              {profile?.domain_id ? ` specializing in ${profile.domain_id}` : ''}.
+              Genois Score {score}/1000 — built from real daily activity, not a certificate.
+              {projects.filter(p=>p.verified).length > 0
+                ? ` ${projects.filter(p=>p.verified).length} GitHub-verified project(s).` : ''}
+              {streak >= 7 ? ` ${streak}-day consistency streak.` : ''}"
             </p>
           </div>
         )}
 
         {/* HERO CARD */}
-        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
-          className="relative overflow-hidden rounded-2xl"
+        <motion.div initial={{ opacity:0, y:15 }} animate={{ opacity:1, y:0 }}
+          className="rounded-2xl overflow-hidden"
           style={{
-            background: `linear-gradient(135deg, ${tier.glow} 0%, rgba(18,18,26,0.9) 100%)`,
-            border: `1px solid ${tier.color}30`,
+            background: `linear-gradient(135deg, ${tier.glow} 0%, rgba(10,10,18,0.95) 100%)`,
+            border: `1px solid ${tier.color}25`,
           }}>
-          <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full opacity-10"
-            style={{ background: `radial-gradient(circle, ${tier.color}, transparent)` }} />
-
-          <div className="p-6">
+          <div className="p-5">
             {editing ? (
+              /* EDIT FORM */
               <div className="space-y-3">
+                <p className="text-xs font-bold text-primary mb-2">✏️ Edit Your Profile</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { key:'full_name', label:'Full Name', placeholder:'Your name' },
-                    { key:'target_role', label:'Target Role', placeholder:'Full Stack Developer' },
-                    { key:'college', label:'College', placeholder:'Your college' },
-                    { key:'branch', label:'Branch', placeholder:'Computer Science' },
-                    { key:'github_username', label:'GitHub Username', placeholder:'username' },
+                    { key:'full_name',    label:'Full Name',        placeholder:'Your full name' },
+                    { key:'email',        label:'Email',            placeholder:'your@email.com' },
+                    { key:'college',      label:'College Name',     placeholder:'KLEIT, VTU...' },
+                    { key:'branch',       label:'Branch',           placeholder:'Computer Science' },
+                    { key:'year',         label:'Year',             placeholder:'3rd Year' },
                     { key:'graduation_year', label:'Graduation Year', placeholder:'2026' },
+                    { key:'phone',        label:'Phone',            placeholder:'+91 9876543210' },
+                    { key:'github_username', label:'GitHub Username', placeholder:'username' },
+                    { key:'target_role',  label:'Target Role',      placeholder:'Full Stack Developer' },
                   ].map(f => (
                     <div key={f.key}>
-                      <label className="text-xs text-gray-400 mb-1 block">{f.label}</label>
-                      <input value={editForm[f.key]}
-                        onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+                      <label className="text-xs text-gray-500 mb-1 block">{f.label}</label>
+                      <input
+                        value={editForm[f.key]}
+                        onChange={e => setEditForm(p=>({...p,[f.key]:e.target.value}))}
                         placeholder={f.placeholder}
-                        className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary" />
+                        className="w-full bg-dark-700 border border-dark-500 rounded-xl px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary"/>
                     </div>
                   ))}
                 </div>
+
+                {/* Study preferences */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">
+                      Study Hours per Day
+                    </label>
+                    <select
+                      value={editForm.study_hours_per_day}
+                      onChange={e => setEditForm(p=>({...p,study_hours_per_day:e.target.value}))}
+                      className="w-full bg-dark-700 border border-dark-500 rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-primary">
+                      <option value={1}>1 hour (light)</option>
+                      <option value={2}>2 hours (normal)</option>
+                      <option value={3}>3 hours (intensive)</option>
+                      <option value={4}>4 hours (full focus)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">
+                      Learning Speed
+                    </label>
+                    <select
+                      value={editForm.learning_speed}
+                      onChange={e => setEditForm(p=>({...p,learning_speed:e.target.value}))}
+                      className="w-full bg-dark-700 border border-dark-500 rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-primary">
+                      <option value="slow">🌱 Slow (easy questions)</option>
+                      <option value="normal">⚡ Normal (medium questions)</option>
+                      <option value="fast">🔥 Fast (hard questions)</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-xs text-gray-400 mb-1 block">Bio</label>
-                  <textarea value={editForm.bio}
-                    onChange={e => setEditForm(p => ({ ...p, bio: e.target.value }))}
+                  <label className="text-xs text-gray-500 mb-1 block">Bio</label>
+                  <textarea
+                    value={editForm.bio}
+                    onChange={e => setEditForm(p=>({...p,bio:e.target.value}))}
                     placeholder="Tell companies about yourself..."
                     rows={2}
-                    className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary resize-none" />
+                    className="w-full bg-dark-700 border border-dark-500 rounded-xl px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary resize-none"/>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block">Learning Speed</label>
-                  <select
-                    value={editForm.learning_speed || 'normal'}
-                    onChange={e => setEditForm(f => ({ ...f, learning_speed: e.target.value }))}
-                    className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-primary">
-                    <option value="slow">🌱 Slow (Easy questions)</option>
-                    <option value="normal">⚡ Normal (Medium questions)</option>
-                    <option value="fast">🔥 Fast (Hard questions)</option>
-                  </select>
-                  <p className="text-xs text-gray-600 mt-1">Affects quiz difficulty and task count</p>
-                </div>
+
                 <button onClick={saveProfile}
-                  className="px-6 py-2.5 bg-primary text-dark-900 font-bold rounded-xl text-sm">
-                  Save ✅
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-dark-900"
+                  style={{ background:'#00FF94', boxShadow:'0 0 12px rgba(0,255,148,0.3)' }}>
+                  <Save size={13}/> Save Profile
                 </button>
               </div>
             ) : (
+              /* PROFILE DISPLAY */
               <div className="flex items-start gap-5 flex-wrap">
                 {/* Avatar */}
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white border-4 border-dark-800"
-                    style={{ background: `linear-gradient(135deg, ${tier.color}40, ${tier.color}80)` }}>
+                <div className="relative flex-shrink-0">
+                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold"
+                    style={{
+                      background:`linear-gradient(135deg, ${tier.color}30, ${tier.color}60)`,
+                      border:`2px solid ${tier.color}40`,
+                      boxShadow:`0 0 20px ${tier.glow}`,
+                    }}>
                     {profile?.full_name?.charAt(0)?.toUpperCase() || 'G'}
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-success border-2 border-dark-800" />
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-success border-2 border-dark-900"/>
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-white font-heading">
-                    {profile?.full_name || 'Your Name'}
+                    {profile?.full_name || 'Add your name'}
                   </h2>
                   <p className="text-sm text-gray-400 mt-0.5">
-                    {profile?.target_role || 'Add your target role'}
+                    {profile?.target_role || 'Add target role'}
                   </p>
-                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+
+                  {/* Details */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                     {profile?.college && (
                       <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <GraduationCap size={11} /> {profile.college}
+                        <GraduationCap size={11}/> {profile.college}
                       </span>
                     )}
                     {profile?.branch && (
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <MapPin size={11} /> {profile.branch}
+                      <span className="text-xs text-gray-500">
+                        📚 {profile.branch}
+                      </span>
+                    )}
+                    {profile?.year && (
+                      <span className="text-xs text-gray-500">
+                        📅 {profile.year}
                       </span>
                     )}
                     {profile?.graduation_year && (
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <Calendar size={11} /> Class of {profile.graduation_year}
+                      <span className="text-xs text-gray-500">
+                        🎓 Class of {profile.graduation_year}
+                      </span>
+                    )}
+                    {profile?.email && (
+                      <span className="text-xs text-gray-500">
+                        ✉️ {profile.email}
+                      </span>
+                    )}
+                    {profile?.phone && (
+                      <span className="text-xs text-gray-500">
+                        📱 {profile.phone}
                       </span>
                     )}
                   </div>
+
                   {profile?.bio && (
-                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">{profile.bio}</p>
+                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                      {profile.bio}
+                    </p>
                   )}
+
+                  {/* Badges */}
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-                      style={{ background:'rgba(0,255,148,0.08)', border:'1px solid rgba(0,255,148,0.2)' }}>
-                      <Shield size={11} className="text-primary" />
+                      style={{ background:'rgba(0,255,148,0.06)', border:'1px solid rgba(0,255,148,0.18)' }}>
+                      <Shield size={11} className="text-primary"/>
                       <span className="text-xs text-primary font-bold">VERIFIED BY GENOIS AI</span>
                     </div>
                     {profile?.github_username && (
                       <a href={`https://github.com/${profile.github_username}`}
                         target="_blank" rel="noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-500 text-gray-300 hover:text-white text-xs transition-all">
-                        <Github size={11} /> {profile.github_username}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all hover:text-white"
+                        style={{ background:'rgba(18,18,26,0.8)', color:'#666', border:'1px solid rgba(34,34,51,0.5)' }}>
+                        <Github size={11}/> {profile.github_username}
                       </a>
                     )}
+                    <span className="text-xs px-2 py-1 rounded-lg"
+                      style={{ background:'rgba(0,255,148,0.06)', color:'#00FF94' }}>
+                      {profile?.domain_id || 'fullstack'}
+                    </span>
+                    <span className="text-xs text-gray-600">
+                      📖 {profile?.study_hours_per_day || 2}h/day
+                    </span>
                   </div>
                 </div>
 
                 {/* Score ring */}
-                <div className="text-center">
+                <div className="text-center flex-shrink-0">
                   <div className="relative w-24 h-24">
                     <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                      <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                      <motion.circle cx="50" cy="50" r="40" fill="none" strokeWidth="8"
-                        stroke={tier.color} strokeLinecap="round"
+                      <circle cx="50" cy="50" r="40" fill="none"
+                        stroke="rgba(255,255,255,0.04)" strokeWidth="8"/>
+                      <motion.circle cx="50" cy="50" r="40" fill="none"
+                        strokeWidth="8" stroke={tier.color} strokeLinecap="round"
                         initial={{ strokeDasharray:'0 251.2' }}
                         animate={{ strokeDasharray:`${(score/1000)*251.2} 251.2` }}
                         transition={{ duration:1.5, ease:'easeOut' }}
@@ -491,11 +496,15 @@ const Profile = () => {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-xl font-bold font-heading" style={{ color:tier.color }}>{score}</span>
-                      <span className="text-xs text-gray-500">/1000</span>
+                      <span className="text-xl font-bold font-heading" style={{ color:tier.color }}>
+                        {score}
+                      </span>
+                      <span className="text-xs text-gray-600">/1000</span>
                     </div>
                   </div>
-                  <div className="text-xs font-bold mt-1" style={{ color:tier.color }}>{tier.label}</div>
+                  <div className="text-xs font-bold mt-1" style={{ color:tier.color }}>
+                    {tier.label}
+                  </div>
                   <div className="text-xs text-gray-600">Genois Score™</div>
                 </div>
               </div>
@@ -506,224 +515,164 @@ const Profile = () => {
         {/* STATS ROW */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { icon:'📅', label:'Current Day', value:`Day ${currentDay || 1}` },
-            { icon:'🔥', label:'Streak', value:`${streak} days` },
-            { icon:'🗺️', label:'Nodes Done', value:completedNodes },
-            { icon:'📝', label:'Tests Passed', value:passedTests },
-            { icon:'⏱️', label:'Study Hours', value:`${totalStudyHours}h` },
-          ].map((stat, i) => (
-            <motion.div key={i}
-              initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
-              transition={{ delay:i*0.05 }}
-              className="bg-dark-800 border border-dark-600 rounded-xl p-3 text-center">
-              <div className="text-xl mb-1">{stat.icon}</div>
-              <div className="text-base font-bold text-white font-heading">{stat.value}</div>
-              <div className="text-xs text-gray-500">{stat.label}</div>
-            </motion.div>
+            { icon:'📅', label:'Current Day',  value:`Day ${profile?.current_day||1}` },
+            { icon:'🔥', label:'Streak',        value:`${streak}d` },
+            { icon:'✅', label:'Tasks Done',    value:completedTasks },
+            { icon:'📝', label:'Tests Passed',  value:passedTests },
+            { icon:'🗺️', label:'Nodes Done',    value:completedNodes },
+          ].map((s,i) => (
+            <div key={i} className="p-3 rounded-xl text-center"
+              style={{ background:'rgba(10,10,18,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
+              <div className="text-xl mb-1">{s.icon}</div>
+              <div className="text-lg font-bold text-white font-heading">{s.value}</div>
+              <div className="text-xs text-gray-600">{s.label}</div>
+            </div>
           ))}
         </div>
 
         {/* JOB READINESS */}
-        {jobReadiness && (
-          <JobReadinessMeter
-            jobReadiness={jobReadiness}
-            showBreakdown={true}
-            showNextStep={true}
-            compact={false}
-          />
-        )}
-
-        {/* SCORE BREAKDOWN */}
-        {scoreData && (
-          <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
-            <h2 className="font-bold text-white font-heading text-sm mb-4 flex items-center gap-2">
-              <Zap size={15} className="text-primary" />
-              Score Breakdown — Why {score} points?
-            </h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {Object.entries(scoreData.breakdown).map(([key, item], i) => (
-                <div key={key} className="p-3 rounded-xl"
-                  style={{ background:`${item.color}08`, border:`1px solid ${item.color}15` }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-white capitalize">{key}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">{item.weight}</span>
-                      <span className="text-sm font-bold font-mono" style={{ color:item.color }}>
-                        {item.score}/{item.max}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-dark-600 rounded-full overflow-hidden mb-1.5">
-                    <motion.div
-                      initial={{ width:0 }}
-                      animate={{ width:`${(item.score/item.max)*100}%` }}
-                      transition={{ duration:1, delay:i*0.1 }}
-                      className="h-full rounded-full"
-                      style={{ background:item.color }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500">{item.details}</p>
-                </div>
-              ))}
+        <div className="p-5 rounded-2xl"
+          style={{ background:'rgba(10,10,18,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-bold text-white font-heading text-sm flex items-center gap-2">
+                <Target size={14} className="text-primary"/> Job Readiness
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Score 30% + Roadmap 30% + Projects 20% + Tests 20%
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold font-heading"
+                style={{ color:jobStatus.color }}>
+                {jobReady}%
+              </div>
+              <div className="text-xs font-semibold" style={{ color:jobStatus.color }}>
+                {jobStatus.label}
+              </div>
             </div>
           </div>
-        )}
-
-        {/* SKILL GROWTH GRAPH */}
-        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
-          <h2 className="font-bold text-white font-heading text-sm mb-4 flex items-center gap-2">
-            <TrendingUp size={15} className="text-secondary" />
-            Skill Growth Graph
-          </h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={scoreHistory}>
-              <defs>
-                <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00FF94" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#00FF94" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="day" tick={{ fill:'#666', fontSize:11 }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0,'auto']} tick={{ fill:'#666', fontSize:11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background:'#1A1A27', border:'1px solid #2A2A3F', borderRadius:'8px', fontSize:'12px' }} />
-              <Area type="monotone" dataKey="score" stroke="#00FF94" strokeWidth={2}
-                fill="url(#scoreGrad)" dot={{ fill:'#00FF94', r:3 }} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width:0 }}
+              animate={{ width:`${jobReady}%` }}
+              transition={{ duration:1.5, ease:'easeOut' }}
+              className="h-full rounded-full"
+              style={{ background:`linear-gradient(90deg,${jobStatus.color}60,${jobStatus.color})` }}
+            />
+          </div>
+          <div className="flex justify-between mt-1.5 text-xs text-gray-700">
+            <span>Beginner</span><span>Learning</span>
+            <span>Job Ready</span><span>Interview Ready</span>
+          </div>
         </div>
 
-        {/* STRONG + WEAK TOPICS */}
+        {/* WEAK + STRONG TOPICS */}
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
-            <h2 className="font-bold text-white font-heading text-sm mb-3 flex items-center gap-2">
-              <CheckCircle size={14} className="text-success" /> Strong Topics
-            </h2>
-            {strongTopics.length === 0 ? (
-              <p className="text-xs text-gray-500">Complete tests to identify strengths</p>
-            ) : (
-              <div className="space-y-2">
-                {strongTopics.map((topic, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg"
-                    style={{ background:'rgba(0,255,148,0.06)', border:'1px solid rgba(0,255,148,0.15)' }}>
-                    <span className="text-success text-sm">💪</span>
-                    <span className="text-xs font-medium text-white">{topic}</span>
-                    <span className="ml-auto text-xs text-success">Strong</span>
-                  </div>
-                ))}
+          <div className="p-4 rounded-2xl"
+            style={{ background:'rgba(10,10,18,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
+            <h3 className="text-xs font-bold text-success mb-3 flex items-center gap-1.5">
+              <CheckCircle size={12}/> Strong Topics
+            </h3>
+            {(profile?.strong_topics||[]).length === 0 ? (
+              <p className="text-xs text-gray-600">Pass tests to discover strengths</p>
+            ) : (profile?.strong_topics||[]).map((t,i) => (
+              <div key={i} className="flex items-center gap-2 mb-1.5 p-2 rounded-lg"
+                style={{ background:'rgba(0,255,148,0.05)' }}>
+                <span className="text-xs">💪</span>
+                <span className="text-xs text-white">{t}</span>
               </div>
-            )}
+            ))}
           </div>
-
-          <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
-            <h2 className="font-bold text-white font-heading text-sm mb-3 flex items-center gap-2">
-              <AlertCircle size={14} className="text-warning" /> Weak Topics
-            </h2>
-            {weakTopics.length === 0 ? (
-              <p className="text-xs text-gray-500">No weak areas detected yet. Keep taking tests!</p>
-            ) : (
-              <div className="space-y-2">
-                {weakTopics.map((topic, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg"
-                    style={{ background:'rgba(255,179,71,0.06)', border:'1px solid rgba(255,179,71,0.15)' }}>
-                    <span className="text-sm">⚠️</span>
-                    <span className="text-xs font-medium text-white">{topic}</span>
-                    <a href="/student/notes" className="ml-auto text-xs text-warning hover:underline">
-                      Study →
-                    </a>
-                  </div>
-                ))}
+          <div className="p-4 rounded-2xl"
+            style={{ background:'rgba(10,10,18,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
+            <h3 className="text-xs font-bold text-warning mb-3 flex items-center gap-1.5">
+              <AlertCircle size={12}/> Weak Topics
+            </h3>
+            {(profile?.weak_topics||[]).length === 0 ? (
+              <p className="text-xs text-gray-600">No weak areas detected yet</p>
+            ) : (profile?.weak_topics||[]).map((t,i) => (
+              <div key={i} className="flex items-center justify-between mb-1.5 p-2 rounded-lg"
+                style={{ background:'rgba(255,179,71,0.05)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs">⚠️</span>
+                  <span className="text-xs text-white">{t}</span>
+                </div>
+                <a href="/student/notes" className="text-xs text-warning hover:underline">
+                  Study →
+                </a>
               </div>
-            )}
+            ))}
           </div>
         </div>
-
-        {/* SKILLS */}
-        {skills.length > 0 && (
-          <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
-            <h2 className="font-bold text-white font-heading text-sm mb-4 flex items-center gap-2">
-              <Zap size={14} className="text-primary" /> Verified Skills
-              <span className="text-xs text-gray-500 font-normal">({skills.length} skills)</span>
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill, i) => {
-                const color = SKILL_COLORS[Math.min(skill.level||1, 5)];
-                return (
-                  <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                    style={{ background:`${color}15`, color, border:`1px solid ${color}25` }}>
-                    {skill.skill_name}
-                    <span className="opacity-60">L{skill.level||1}</span>
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* PROJECTS */}
-        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
+        <div className="p-5 rounded-2xl"
+          style={{ background:'rgba(10,10,18,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-white font-heading text-sm flex items-center gap-2">
-              💻 Projects
-              <span className="text-xs text-gray-500 font-normal">({projects.length})</span>
+            <h2 className="font-bold text-white font-heading text-sm">
+              💻 Projects ({projects.length})
             </h2>
             <button onClick={() => setAddingProject(!addingProject)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{ background:'rgba(123,97,255,0.1)', color:'#7B61FF', border:'1px solid rgba(123,97,255,0.3)' }}>
-              {addingProject ? 'Cancel' : '+ Add Project'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{ background:'rgba(123,97,255,0.08)', color:'#7B61FF', border:'1px solid rgba(123,97,255,0.25)' }}>
+              <Plus size={11}/> {addingProject ? 'Cancel' : 'Add Project'}
             </button>
           </div>
 
           {addingProject && (
-            <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }}
-              className="bg-dark-700 rounded-xl p-4 mb-4 space-y-3">
+            <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }}
+              className="p-4 rounded-xl mb-4 space-y-3"
+              style={{ background:'rgba(18,18,26,0.8)', border:'1px solid rgba(34,34,51,0.6)' }}>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { key:'title', label:'Title *', placeholder:'My Project' },
-                  { key:'tech_stack', label:'Tech Stack (comma separated)', placeholder:'React, Node.js' },
-                  { key:'github_url', label:'GitHub URL', placeholder:'https://github.com/...' },
-                  { key:'live_url', label:'Live URL', placeholder:'https://myproject.vercel.app' },
+                  { key:'title',       label:'Title *',         placeholder:'My Project' },
+                  { key:'tech_stack',  label:'Tech (comma sep)', placeholder:'React, Node.js' },
+                  { key:'github_url',  label:'GitHub URL',      placeholder:'https://github.com/...' },
+                  { key:'live_url',    label:'Live URL',        placeholder:'https://myapp.vercel.app' },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className="text-xs text-gray-400 mb-1 block">{f.label}</label>
-                    <input value={projectForm[f.key]}
-                      onChange={e => setProjectForm(p => ({ ...p, [f.key]: e.target.value }))}
+                    <label className="text-xs text-gray-500 mb-1 block">{f.label}</label>
+                    <input
+                      value={projectForm[f.key]}
+                      onChange={e => setProjectForm(p=>({...p,[f.key]:e.target.value}))}
                       placeholder={f.placeholder}
-                      className="w-full bg-dark-600 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary" />
+                      className="w-full bg-dark-600 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary"/>
                   </div>
                 ))}
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Description</label>
-                <textarea value={projectForm.description}
-                  onChange={e => setProjectForm(p => ({ ...p, description: e.target.value }))}
+                <label className="text-xs text-gray-500 mb-1 block">Description</label>
+                <textarea
+                  value={projectForm.description}
+                  onChange={e => setProjectForm(p=>({...p,description:e.target.value}))}
                   placeholder="What does this project do?"
                   rows={2}
-                  className="w-full bg-dark-600 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary resize-none" />
+                  className="w-full bg-dark-600 border border-dark-500 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-primary resize-none"/>
               </div>
               <button onClick={addProject}
-                className="px-5 py-2 bg-primary text-dark-900 font-bold rounded-xl text-sm">
+                className="px-5 py-2 rounded-xl font-bold text-sm text-dark-900"
+                style={{ background:'#00FF94' }}>
                 Add Project 🚀
               </button>
             </motion.div>
           )}
 
           {projects.length === 0 && !addingProject ? (
-            <div className="text-center py-8">
+            <div className="text-center py-6">
               <div className="text-3xl mb-2">💻</div>
-              <p className="text-sm text-gray-500 mb-3">No projects yet</p>
+              <p className="text-xs text-gray-600 mb-3">No projects yet</p>
               <button onClick={() => setAddingProject(true)}
-                className="px-4 py-2 bg-secondary/10 text-secondary border border-secondary/30 rounded-xl text-xs font-semibold">
+                className="px-4 py-2 rounded-xl text-xs font-bold"
+                style={{ background:'rgba(123,97,255,0.08)', color:'#7B61FF', border:'1px solid rgba(123,97,255,0.2)' }}>
                 Add Your First Project
               </button>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-3">
-              {projects.map((project, i) => (
-                <motion.div key={project.id}
-                  initial={{ opacity:0, y:10 }}
-                  animate={{ opacity:1, y:0 }}
-                  transition={{ delay:i*0.05 }}
-                  className="p-4 rounded-xl border border-dark-500 bg-dark-700">
+              {projects.map((project,i) => (
+                <div key={project.id} className="p-4 rounded-xl"
+                  style={{ background:'rgba(18,18,26,0.8)', border:'1px solid rgba(34,34,51,0.5)' }}>
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <h3 className="text-sm font-semibold text-white">{project.title}</h3>
@@ -734,27 +683,28 @@ const Profile = () => {
                     <div className="flex gap-1.5">
                       {project.github_url && (
                         <a href={project.github_url} target="_blank" rel="noreferrer"
-                          className="p-1.5 rounded-lg bg-dark-600 text-gray-400 hover:text-white transition-colors">
-                          <Github size={12} />
+                          className="p-1.5 rounded-lg bg-dark-600 text-gray-500 hover:text-white transition-colors">
+                          <Github size={12}/>
                         </a>
                       )}
                       {project.live_url && (
                         <a href={project.live_url} target="_blank" rel="noreferrer"
-                          className="p-1.5 rounded-lg bg-dark-600 text-gray-400 hover:text-white transition-colors">
-                          <ExternalLink size={12} />
+                          className="p-1.5 rounded-lg bg-dark-600 text-gray-500 hover:text-white transition-colors">
+                          <ExternalLink size={12}/>
                         </a>
                       )}
                     </div>
                   </div>
                   {project.description && (
-                    <p className="text-xs text-gray-400 mb-2 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-gray-500 mb-2 leading-relaxed line-clamp-2">
                       {project.description}
                     </p>
                   )}
                   {project.tech_stack?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
-                      {project.tech_stack.map((tech, j) => (
-                        <span key={j} className="px-1.5 py-0.5 bg-secondary/10 text-secondary rounded-md text-xs">
+                      {project.tech_stack.map((tech,j) => (
+                        <span key={j} className="px-1.5 py-0.5 rounded text-xs"
+                          style={{ background:'rgba(0,255,148,0.06)', color:'#00FF94' }}>
                           {tech}
                         </span>
                       ))}
@@ -762,86 +712,81 @@ const Profile = () => {
                   )}
                   {project.metadata?.commit_count && (
                     <p className="text-xs text-gray-600 mb-2">
-                      {project.metadata.commit_count} commits · {project.metadata.language}
+                      {project.metadata.commit_count} commits
+                      {project.metadata.language ? ` · ${project.metadata.language}` : ''}
+                      {project.metadata.difficulty ? ` · ${project.metadata.difficulty}` : ''}
                     </p>
                   )}
                   {!project.verified && project.github_url && (
                     <button onClick={() => verifyGitHub(project)}
-                      className="w-full py-1.5 rounded-lg text-xs font-semibold transition-all mt-1"
-                      style={{ background:'rgba(74,158,255,0.1)', color:'#4A9EFF', border:'1px solid rgba(74,158,255,0.2)' }}>
+                      className="w-full py-1.5 rounded-lg text-xs font-semibold transition-all"
+                      style={{ background:'rgba(74,158,255,0.08)', color:'#4A9EFF', border:'1px solid rgba(74,158,255,0.2)' }}>
                       🔍 Verify on GitHub
                     </button>
                   )}
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
         </div>
 
         {/* BADGES */}
-        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-5">
+        <div className="p-5 rounded-2xl"
+          style={{ background:'rgba(10,10,18,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
           <h2 className="font-bold text-white font-heading text-sm mb-4 flex items-center gap-2">
-            <Award size={14} className="text-warning" /> Badges
-            <span className="text-xs text-gray-500 font-normal">
-              ({earnedBadges.length}/{BADGES.length} earned)
-            </span>
+            <Award size={14} className="text-warning"/>
+            Badges ({earnedBadges.length}/{BADGES_CONFIG.length} earned)
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {BADGES.map((badge, i) => {
-              const earned = earnedBadges.find(b => b.id === badge.id);
-              const color = rarityColors[badge.rarity];
+            {BADGES_CONFIG.map((badge,i) => {
+              const earned = earnedBadges.find(b=>b.id===badge.id);
               return (
-                <motion.div key={badge.id}
-                  initial={{ opacity:0, scale:0.9 }}
-                  animate={{ opacity:1, scale:1 }}
-                  transition={{ delay:i*0.04 }}
+                <div key={badge.id}
                   className="p-3 rounded-xl text-center transition-all"
                   style={{
-                    background: earned ? `${badge.color}10` : 'rgba(18,18,26,0.5)',
-                    border: `1px solid ${earned ? badge.color+'30' : 'rgba(34,34,51,0.5)'}`,
-                    opacity: earned ? 1 : 0.4,
+                    background: earned ? `${badge.color}08` : 'rgba(10,10,18,0.5)',
+                    border: `1px solid ${earned ? badge.color+'20' : 'rgba(34,34,51,0.4)'}`,
+                    opacity: earned ? 1 : 0.35,
                   }}>
                   <div className="text-2xl mb-1.5">{earned ? badge.icon : '🔒'}</div>
                   <p className="text-xs font-bold text-white mb-0.5">{badge.name}</p>
-                  <p className="text-xs text-gray-500 leading-tight">{badge.description}</p>
+                  <p className="text-xs text-gray-600 leading-tight">{badge.desc}</p>
                   {earned && (
-                    <span className="mt-1.5 inline-block text-xs px-1.5 py-0.5 rounded-full capitalize font-semibold"
-                      style={{ background:`${color}15`, color }}>
+                    <span className="mt-1.5 inline-block text-xs px-1.5 py-0.5 rounded-full font-semibold capitalize"
+                      style={{ background:`${RARITY_COLOR[badge.rarity]}15`, color:RARITY_COLOR[badge.rarity] }}>
                       {badge.rarity}
                     </span>
                   )}
-                </motion.div>
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* TRUST ENGINE */}
-        <TrustPanel
-          studentId={profile?.id}
-          profile={profile}
-          skills={skills}
-          projects={projects}
-          compact={true}
-        />
-
         {/* PUBLIC LINK */}
-        <div className="bg-dark-800 border border-dark-600 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="p-4 rounded-xl flex items-center justify-between flex-wrap gap-3"
+          style={{ background:'rgba(0,255,148,0.04)', border:'1px solid rgba(0,255,148,0.12)' }}>
           <div>
             <p className="text-sm font-semibold text-white">🔗 Your Public Skill Identity</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              genois-ai.vercel.app/u/{profile?.id?.substring(0,8)}...
+            <p className="text-xs text-gray-600 mt-0.5">
+              {window.location.origin}/u/{profile?.id?.substring(0,8)}...
             </p>
           </div>
           <div className="flex gap-2">
             <a href={`/u/${profile?.id}`} target="_blank"
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-dark-700 border border-dark-500 text-gray-300 hover:text-white transition-all">
+              className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+              style={{ background:'rgba(18,18,26,0.8)', color:'#666', border:'1px solid rgba(34,34,51,0.5)' }}>
               Preview →
             </a>
             <button
-              onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/u/${profile?.id}`); toast.success('Copied! 🔗'); }}
-              className="px-4 py-2 rounded-xl text-xs font-semibold transition-all"
-              style={{ background:'rgba(0,255,148,0.1)', color:'#00FF94', border:'1px solid rgba(0,255,148,0.3)' }}>
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `${window.location.origin}/u/${profile?.id}`
+                );
+                toast.success('Copied! 🔗');
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+              style={{ background:'rgba(0,255,148,0.08)', color:'#00FF94', border:'1px solid rgba(0,255,148,0.2)' }}>
               Copy Link
             </button>
           </div>
