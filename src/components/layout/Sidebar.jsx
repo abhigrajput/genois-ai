@@ -54,18 +54,16 @@ const Sidebar = () => {
         {navItems.map(({ icon: Icon, label, path }) => (
           <NavLink key={path} to={path}
             onClick={() => setMobileOpen(false)}
-            className={({ isActive }) => `
-              relative flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5
-              text-sm font-medium transition-all duration-150
-              ${isActive
-                ? 'bg-primary/10 text-primary'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-dark-700'
-              }
-            `}>
+            className={({ isActive }) =>
+              `relative flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5
+               text-sm font-medium transition-all duration-150
+               ${isActive ? 'nav-active' : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.03]'}`
+            }>
             {({ isActive }) => (
               <>
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-primary" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full"
+                    style={{ background:'#00FF94', boxShadow:'0 0 8px rgba(0,255,148,0.8)' }} />
                 )}
                 <Icon size={15} />
                 <span>{label}</span>
@@ -81,7 +79,8 @@ const Sidebar = () => {
       </div>
 
       {profile && (
-        <div className="p-3 m-2 rounded-xl bg-dark-700 border border-dark-500">
+        <div className="p-3 m-2 rounded-xl"
+          style={{ background:'rgba(18,18,26,0.8)', border:'1px solid rgba(34,34,51,0.5)' }}>
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-xs font-bold text-white">
               {profile.full_name?.charAt(0)?.toUpperCase() || 'G'}
@@ -98,7 +97,12 @@ const Sidebar = () => {
 
   return (
     <>
-      <aside className="hidden md:flex flex-col w-52 bg-dark-800 border-r border-dark-600 fixed top-14 left-0 bottom-0 z-30">
+      <aside className="hidden md:flex flex-col w-52 fixed top-14 left-0 bottom-0 z-30"
+        style={{
+          background: 'rgba(5,5,8,0.98)',
+          borderRight: '1px solid rgba(0,255,148,0.08)',
+          boxShadow: '2px 0 20px rgba(0,0,0,0.5)',
+        }}>
         <SidebarContent />
       </aside>
 
@@ -114,9 +118,15 @@ const Sidebar = () => {
           <motion.aside
             initial={{ x: -256 }} animate={{ x: 0 }}
             transition={{ type: 'spring', damping: 25 }}
-            className="md:hidden fixed top-0 left-0 bottom-0 w-64 bg-dark-800 border-r border-dark-600 z-50">
-            <div className="flex items-center justify-between p-4 border-b border-dark-600">
-              <span className="text-primary font-bold font-heading">GENOIS AI</span>
+            className="md:hidden fixed top-0 left-0 bottom-0 w-64 z-50"
+            style={{
+              background: 'rgba(5,5,8,0.98)',
+              borderRight: '1px solid rgba(0,255,148,0.1)',
+              boxShadow: '4px 0 30px rgba(0,0,0,0.7)',
+            }}>
+            <div className="flex items-center justify-between p-4"
+              style={{ borderBottom:'1px solid rgba(0,255,148,0.08)' }}>
+              <span className="logo-glow text-lg font-bold">GENOIS AI</span>
               <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-white">
                 <X size={18} />
               </button>

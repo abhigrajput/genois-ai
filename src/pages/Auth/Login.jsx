@@ -33,7 +33,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
+    <div className="min-h-screen cyber-grid flex items-center justify-center p-4" style={{ position:'relative' }}>
       <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
         className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -42,7 +42,11 @@ const Login = () => {
           </Link>
           <p className="text-gray-400 mt-2 text-sm">Welcome back. Keep building.</p>
         </div>
-        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-6">
+        <div className="rounded-2xl p-6" style={{
+          background: 'rgba(8,8,14,0.95)',
+          border: '1px solid rgba(0,255,148,0.15)',
+          boxShadow: '0 0 40px rgba(0,0,0,0.6), 0 0 20px rgba(0,255,148,0.05)',
+        }}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-300">Email</label>
@@ -69,7 +73,12 @@ const Login = () => {
               </div>
             </div>
             <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-dark-900 font-bold rounded-xl hover:bg-opacity-90 transition-all disabled:opacity-50 text-sm mt-2">
+              className="w-full flex items-center justify-center gap-2 py-3 font-bold rounded-xl transition-all disabled:opacity-50 text-sm mt-2"
+              style={{
+                background: 'linear-gradient(135deg, #00FF94, #7B61FF)',
+                color: '#050508',
+                boxShadow: '0 0 20px rgba(0,255,148,0.3)',
+              }}>
               {loading ? (
                 <div className="w-4 h-4 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
               ) : (

@@ -72,19 +72,35 @@ function App() {
 
   return (
     <BrowserRouter>
+      <div
+        style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          pointerEvents: 'none',
+          zIndex: 0,
+          background: `
+            radial-gradient(ellipse 80% 50% at 20% 0%,
+              rgba(0,255,148,0.04) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 40% at 80% 100%,
+              rgba(123,97,255,0.04) 0%, transparent 60%)
+          `,
+        }}
+      />
       <Toaster
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1A1A27',
-            color: '#E8E8F0',
-            border: '1px solid #2A2A3F',
+            background: 'rgba(8,8,14,0.95)',
+            color: '#E2E2F0',
+            border: '1px solid rgba(0,255,148,0.2)',
+            boxShadow: '0 0 20px rgba(0,0,0,0.5), 0 0 10px rgba(0,255,148,0.08)',
           },
           success: { iconTheme: { primary: '#00FF94', secondary: '#0A0A0F' } },
           error: { iconTheme: { primary: '#FF6B6B', secondary: '#0A0A0F' } },
         }}
       />
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<LoadingFallback />}><div style={{ position:'relative', zIndex:1 }}>
         <Routes>
           {/* Public */}
           <Route path="/" element={<Landing />} />
@@ -169,7 +185,7 @@ function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
+      </div></Suspense>
     </BrowserRouter>
   );
 }

@@ -134,7 +134,7 @@ const Pricing = () => {
   const currentPlan = profile?.plan || 'free';
 
   return (
-    <div className="min-h-screen bg-dark-900 text-gray-100 pb-24">
+    <div className="min-h-screen cyber-grid text-gray-100 pb-24" style={{ position:'relative' }}>
 
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-dark-900/80 backdrop-blur-md border-b border-dark-700">
@@ -185,12 +185,13 @@ const Pricing = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="relative rounded-2xl p-5 flex flex-col"
+                className="relative rounded-2xl p-5 flex flex-col transition-all card-hover cyber-corner"
                 style={{
                   background: plan.key === 'identity'
-                    ? `linear-gradient(135deg, ${plan.color}10, rgba(18,18,26,0.95))`
-                    : 'rgba(18,18,26,0.8)',
+                    ? `linear-gradient(135deg, ${plan.color}10, rgba(8,8,14,0.9))`
+                    : 'rgba(8,8,14,0.9)',
                   border: `1px solid ${isCurrentPlan ? plan.color : plan.color + '25'}`,
+                  boxShadow: `0 0 30px ${plan.color}08`,
                 }}>
 
                 {plan.badge && (

@@ -32,15 +32,16 @@ const Navbar = () => {
     <motion.nav
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="h-14 bg-dark-800 border-b border-dark-600 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-40"
-      style={{ backdropFilter: 'blur(12px)' }}>
+      className="h-14 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-40"
+      style={{
+        background: 'rgba(5,5,8,0.95)',
+        borderBottom: '1px solid rgba(0,255,148,0.1)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 2px 20px rgba(0,0,0,0.5), 0 0 30px rgba(0,255,148,0.03)',
+      }}>
 
-      <Link to="/" className="flex items-center gap-2 group">
-        <span className="text-xl font-bold font-heading transition-all duration-300"
-          style={{
-            color: '#00FF94',
-            textShadow: '0 0 20px rgba(0,255,148,0.4)',
-          }}>
+      <Link to="/" className="flex items-center gap-2">
+        <span className="logo-glow text-xl font-bold logo-flicker">
           GENOIS AI
         </span>
       </Link>
@@ -59,7 +60,8 @@ const Navbar = () => {
         )}
 
         {profile && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-700 border border-dark-500">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg"
+            style={{ background:'rgba(18,18,26,0.8)', border:'1px solid rgba(34,34,51,0.6)' }}>
             <Zap size={11} style={{ color: getScoreColor(profile.skill_score || 0) }} />
             <span className="text-xs font-bold font-heading"
               style={{ color: getScoreColor(profile.skill_score || 0) }}>
@@ -97,18 +99,23 @@ const Navbar = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full mt-2 w-48 bg-dark-700 border border-dark-500 rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-dark-600">
+                className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-2xl z-50 overflow-hidden"
+                style={{
+                  background: 'rgba(8,8,14,0.98)',
+                  border: '1px solid rgba(0,255,148,0.12)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(0,255,148,0.05)',
+                }}>
+                <div className="px-4 py-3" style={{ borderBottom:'1px solid rgba(34,34,51,0.6)' }}>
                   <p className="text-sm font-medium text-white truncate">{profile?.full_name}</p>
                   <p className="text-xs text-gray-500 truncate mt-0.5">{profile?.email}</p>
                 </div>
                 <div className="p-1.5">
                   <button onClick={() => { navigate('/student/profile'); setDropdownOpen(false); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-dark-600 hover:text-white rounded-lg transition-all">
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-white/[0.04] hover:text-white rounded-lg transition-all">
                     <User size={13} /> Profile
                   </button>
                   <button onClick={async () => { await logout(); navigate('/'); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-danger hover:bg-dark-600 rounded-lg transition-all">
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-danger hover:bg-white/[0.04] rounded-lg transition-all">
                     <LogOut size={13} /> Sign out
                   </button>
                 </div>

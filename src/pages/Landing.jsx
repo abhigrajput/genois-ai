@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle, Zap, Shield, TrendingUp, Users, Star, Award } 
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-dark-900 text-gray-100">
+    <div className="min-h-screen cyber-grid text-gray-100" style={{ position:'relative' }}>
 
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-dark-900/80 backdrop-blur-md border-b border-dark-700">
@@ -32,7 +32,15 @@ const Landing = () => {
             <Zap size={12} className="text-primary" />
             <span className="text-xs text-primary font-medium">Built for Tier 3 Engineers</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold font-heading text-white mb-6 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold font-heading leading-tight mb-4"
+            style={{
+              background: 'linear-gradient(135deg, #00FF94 0%, #7B61FF 50%, #4A9EFF 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              textShadow: 'none',
+              filter: 'drop-shadow(0 0 30px rgba(0,255,148,0.3))',
+            }}>
             Replace Your Resume With
             <span style={{color:'#00FF94'}}> Real Skill Identity.</span>
           </h1>
@@ -40,7 +48,7 @@ const Landing = () => {
             Genois builds verified proof of your skills through real tasks, tests and projects — so companies find you by what you can do, not what you studied.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/register" className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-dark-900 font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm">
+            <Link to="/register" className="btn-neon inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold transition-all">
               Start Building Your Profile <ArrowRight size={16} />
             </Link>
             <Link to="/demo" className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-dark-700 border border-dark-500 text-gray-300 font-semibold rounded-xl hover:border-primary hover:text-primary transition-all text-sm">

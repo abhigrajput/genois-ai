@@ -194,7 +194,13 @@ const Dashboard = () => {
         {/* Greeting */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="mb-6">
-          <h1 className="text-2xl font-bold font-heading text-white">
+          <h1 className="text-2xl font-bold font-heading"
+            style={{
+              background: 'linear-gradient(135deg, #00FF94, #7B61FF)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
             {greeting}, {firstName} 👋
           </h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -242,7 +248,8 @@ const Dashboard = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-dark-800 border border-dark-600 rounded-xl p-4 hover:border-primary/40 transition-colors cursor-pointer">
+                  className="p-4 rounded-2xl card-hover cursor-pointer"
+                  style={{ background:'rgba(8,8,14,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
                   {inner}
                 </motion.div>
               </Link>
@@ -250,7 +257,8 @@ const Dashboard = () => {
               <motion.div key={i}
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-dark-800 border border-dark-600 rounded-xl p-4">
+                className="p-4 rounded-2xl card-hover"
+                style={{ background:'rgba(8,8,14,0.9)', border:'1px solid rgba(34,34,51,0.6)' }}>
                 {inner}
               </motion.div>
             );
