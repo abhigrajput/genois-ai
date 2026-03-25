@@ -1,124 +1,53 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, RotateCcw, CheckCircle,
-         Clock, Zap, BookOpen, Code, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { CheckCircle, Clock, Zap,
+         Play, RotateCcw } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { supabase } from '../../lib/supabase';
-import { generateDailyTasks } from '../../lib/claude';
-import { calculateDetailedScore } from '../../lib/scoring';
 import useStore from '../../store/useStore';
-import usePlan from '../../hooks/usePlan';
-import UpgradePrompt from '../../components/ui/UpgradePrompt';
-import { TIMELINES } from '../../data/domains';
 import toast from 'react-hot-toast';
-
-const typeIcon = {
-  video:   '📹',
-  reading: '📖',
-  coding:  '💻',
-  project: '🔨',
-};
-
-const typeColor = {
-  video:   'text-red-400',
-  reading: 'text-blue-400',
-  coding:  'text-primary',
-  project: 'text-secondary',
-};
 
 const Tasks = () => {
   const { profile } = useStore();
-  const { limit: planLimit, isFree } = usePlan();
   const [tasks, setTasks] = useState([]);
-  const [selectedTask, setSelectedTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState('today');
-  const [taskNotes, setTaskNotes] = useState([]);
-
-  // Pomodoro timer
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [isBreak, setIsBreak] = useState(false);
-  const [sessionsCount, setSessionsCount] = useState(0);
-  const timerRef = useRef(null);
+  const [taskStartTimes, setTaskStartTimes] = useState({});
+  const [activeNode, setActiveNode] = useState(null);
 
   useEffect(() => {
-    if (!profile?.id) return;
-    const autoGenerate = async () => {
-      await fetchTasks();
-      if (activeTab === 'today') {
-        const today = new Date().toISOString().split('T')[0];
-        const { data: todayCheck } = await supabase
-          .from('tasks')
-          .select('id')
-          .eq('student_id', profile.id)
-          .eq('due_date', today)
+    if (profile?.id) {
+      fetchTasks();
+      fetchActiveNode();
+    }
+  }, [profile?.id, activeTab]);
+
+  const fetchActiveNode = async () => {
+    try {
+      const { data: rms } = await supabase
+        .from('roadmaps').select('id')
+        .eq('student_id', profile.id).limit(1);
+      if (!rms?.length) return;
+
+      const { data: nodes } = await supabase
+        .from('roadmap_nodes').select('*')
+        .eq('roadmap_id', rms[0].id)
+        .neq('status', 'locked')
+        .order('order_index', { ascending: true })
+        .limit(1);
+
+      if (nodes?.length) {
+        setActiveNode(nodes[0]);
+      } else {
+        const { data: first } = await supabase
+          .from('roadmap_nodes').select('*')
+          .eq('roadmap_id', rms[0].id)
+          .order('order_index', { ascending: true })
           .limit(1);
-        if (!todayCheck || todayCheck.length === 0) {
-          await handleGenerateTasks();
-        }
+        if (first?.length) setActiveNode(first[0]);
       }
-    };
-    autoGenerate();
-  }, [profile, activeTab]);
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  useEffect(() => {
-    if (selectedTask) {
-      setTimerRunning(false);
-      setTimeLeft((selectedTask.estimated_minutes || 25) * 60);
-    }
-  }, [selectedTask]);
-
-  useEffect(() => {
-    if (timerRunning) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            setTimerRunning(false);
-            if (!isBreak) {
-              setSessionsCount(s => s + 1);
-              toast.success('Pomodoro done! Take a 5 min break 🎉');
-              setIsBreak(true);
-              return 5 * 60;
-            } else {
-              toast.success('Break over! Back to work 💪');
-              setIsBreak(false);
-              return 25 * 60;
-            }
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [timerRunning, isBreak]);
-
-  const detectTopicFromTask = (title) => {
-    const t = (title || '').toLowerCase();
-    if (t.includes('react')) return 'React';
-    if (t.includes('node') || t.includes('server')) return 'Node.js';
-    if (t.includes('javascript') || t.includes('js')) return 'JavaScript';
-    if (t.includes('python')) return 'Python';
-    if (t.includes('array') || t.includes('tree') || t.includes('graph') || t.includes('dsa')) return 'DSA';
-    if (t.includes('database') || t.includes('sql')) return 'Database';
-    return 'Web Dev';
-  };
-
-  const fetchTaskNotes = async (task) => {
-    const topic = detectTopicFromTask(task.title);
-    const { data } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('student_id', profile.id)
-      .eq('topic', topic)
-      .limit(2);
-    setTaskNotes(data || []);
+    } catch(e) { console.error(e); }
   };
 
   const fetchTasks = async () => {
@@ -127,17 +56,11 @@ const Tasks = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
+        .from('tasks').select('*')
         .eq('student_id', profile.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('fetchTasks error:', error);
-        setTasks([]);
-        setLoading(false);
-        return;
-      }
+      if (error) { setTasks([]); setLoading(false); return; }
 
       const all = data || [];
       if (activeTab === 'today') {
@@ -145,10 +68,7 @@ const Tasks = () => {
       } else {
         setTasks(all);
       }
-    } catch(err) {
-      console.error(err);
-      setTasks([]);
-    }
+    } catch(e) { setTasks([]); }
     setLoading(false);
   };
 
@@ -160,87 +80,56 @@ const Tasks = () => {
       const today = new Date().toISOString().split('T')[0];
 
       const { data: existing } = await supabase
-        .from('tasks')
-        .select('id')
+        .from('tasks').select('id')
         .eq('student_id', profile.id)
         .eq('due_date', today);
 
       if (existing && existing.length > 0) {
-        toast('Tasks already generated for today!');
+        toast('Tasks already generated for today! ✅');
         setGenerating(false);
         fetchTasks();
         return;
       }
 
-      const { data: roadmaps } = await supabase
-        .from('roadmaps')
-        .select('id')
-        .eq('student_id', profile.id)
-        .limit(1);
-
-      if (!roadmaps || roadmaps.length === 0) {
+      if (!activeNode) {
         toast.error('Generate your roadmap first in Domain Explorer!');
         setGenerating(false);
         return;
       }
 
-      const { data: unlockedNodes } = await supabase
-        .from('roadmap_nodes')
-        .select('*')
-        .eq('roadmap_id', roadmaps[0].id)
-        .neq('status', 'locked')
-        .order('order_index', { ascending: true })
-        .limit(1);
+      const studyHours = profile?.study_hours_per_day || 2;
+      const taskCount = studyHours <= 1 ? 1
+        : studyHours === 2 ? 2
+        : studyHours === 3 ? 3 : 4;
 
-      let activeNode = unlockedNodes?.[0];
-
-      if (!activeNode) {
-        const { data: firstNode } = await supabase
-          .from('roadmap_nodes')
-          .select('*')
-          .eq('roadmap_id', roadmaps[0].id)
-          .order('order_index', { ascending: true })
-          .limit(1);
-        activeNode = firstNode?.[0];
-      }
-
-      if (!activeNode) {
-        toast.error('No roadmap nodes found. Regenerate roadmap.');
-        setGenerating(false);
-        return;
-      }
-
-      const timeline = profile?.timeline || '6months';
-      const taskCount = timeline === '3months' ? 4 : timeline === '9months' ? 1 : 2;
-
-      const taskTemplates = [
+      const allTemplates = [
         {
-          title: `Watch: ${activeNode.title}`,
-          description: `Watch the video resource for ${activeNode.title}. Take notes on key concepts.`,
+          title: `🎥 Watch: ${activeNode.title}`,
+          description: `Watch the YouTube video for ${activeNode.title}. Take notes. Understand core concepts before moving to practice.`,
           type: 'reading',
           estimated_minutes: 60,
         },
         {
-          title: `Practice: ${activeNode.title} exercises`,
-          description: `Write code implementing ${activeNode.title} concepts. Build something small.`,
+          title: `💻 Code: Practice ${activeNode.title}`,
+          description: `Write code implementing ${activeNode.title} concepts. Start small, build working examples.`,
           type: 'coding',
           estimated_minutes: 45,
         },
         {
-          title: `Build: ${activeNode.mini_project || activeNode.title + ' project'}`,
-          description: `Apply ${activeNode.title} by building: ${activeNode.mini_project || 'a working mini project'}`,
+          title: `🔨 Build: ${activeNode.mini_project || activeNode.title + ' project'}`,
+          description: `Apply ${activeNode.title} by building: ${activeNode.mini_project || 'a small working project from scratch'}`,
           type: 'practice',
           estimated_minutes: 60,
         },
         {
-          title: `Revise: ${activeNode.title} key concepts`,
-          description: `Review your notes on ${activeNode.title}. Test yourself on what you learned.`,
+          title: `📝 Revise: ${activeNode.title} concepts`,
+          description: `Review your notes on ${activeNode.title}. Test yourself. Write key concepts from memory.`,
           type: 'reading',
           estimated_minutes: 20,
         },
       ];
 
-      const tasksToCreate = taskTemplates.slice(0, taskCount);
+      const tasksToCreate = allTemplates.slice(0, taskCount);
 
       const { error: insertError } = await supabase
         .from('tasks')
@@ -259,343 +148,288 @@ const Tasks = () => {
         );
 
       if (insertError) {
-        console.error('Task insert error:', insertError);
         toast.error('Error: ' + insertError.message);
       } else {
-        toast.success(`${tasksToCreate.length} tasks ready for today! 🎯`);
+        toast.success(`${tasksToCreate.length} tasks ready! 🎯`);
         fetchTasks();
       }
-    } catch(err) {
-      console.error('handleGenerateTasks error:', err);
+    } catch(e) {
+      console.error(e);
       toast.error('Failed to generate tasks');
     }
     setGenerating(false);
   };
 
-  const completeTask = async (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
+  const startTask = (taskId) => {
+    if (!taskStartTimes[taskId]) {
+      setTaskStartTimes(prev => ({ ...prev, [taskId]: Date.now() }));
+      toast('Timer started! Work for at least 3 minutes ⏱️', { duration: 2000 });
+    }
+  };
 
-    await supabase.from('tasks')
-      .update({ status: 'completed', completed_at: new Date().toISOString() })
+  const completeTask = async (taskId) => {
+    const startTime = taskStartTimes[taskId];
+    const minMs = 3 * 60 * 1000;
+
+    if (startTime && (Date.now() - startTime) < minMs) {
+      const remaining = Math.ceil((minMs - (Date.now() - startTime)) / 1000);
+      toast.error(`Work ${remaining}s more before completing!`);
+      return;
+    }
+
+    const timeSpent = startTime
+      ? Math.round((Date.now() - startTime) / 60000) : 25;
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        time_spent_minutes: timeSpent,
+      })
       .eq('id', taskId);
 
-    if (task.estimated_minutes) {
-      await supabase.from('time_logs').insert({
-        student_id: profile.id,
-        task_id: taskId,
-        node_id: task.node_id,
-        duration_minutes: task.estimated_minutes,
-        logged_at: new Date().toISOString(),
-      });
+    if (!error) {
+      toast.success('Task completed! +8 points 🎯');
+      await supabase.from('profiles').update({
+        skill_score: Math.min(1000, (profile.skill_score||0) + 8),
+      }).eq('id', profile.id);
+      fetchTasks();
     }
-
-    toast.success('+15 Genois Points! 🔥');
-
-    // Recalculate and persist score
-    calculateDetailedScore(profile.id, supabase).then(detailed => {
-      supabase.from('profiles')
-        .update({ skill_score: detailed.total })
-        .eq('id', profile.id);
-    });
-
-    const updatedTasks = tasks.map(t =>
-      t.id === taskId ? { ...t, status: 'completed' } : t
-    );
-    const allDone = updatedTasks.every(t => t.status === 'completed');
-
-    if (allDone && updatedTasks.length > 0) {
-      toast.success('All tasks done! 🔥 Generating new ones...');
-      setTimeout(() => {
-        handleGenerateTasks();
-      }, 1500);
-    }
-
-    fetchTasks();
-    if (selectedTask?.id === taskId) setSelectedTask(null);
   };
 
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+  const typeConfig = {
+    reading: { color:'#4A9EFF', bg:'rgba(74,158,255,0.08)', icon:'📖', label:'Study' },
+    coding:  { color:'#00FF94', bg:'rgba(0,255,148,0.08)',  icon:'💻', label:'Code' },
+    practice:{ color:'#7B61FF', bg:'rgba(123,97,255,0.08)', icon:'🔨', label:'Build' },
   };
 
-  const totalTime = selectedTask
-    ? (selectedTask.estimated_minutes || 25) * 60
-    : 25 * 60;
-  const timerProgress = totalTime > 0
-    ? ((totalTime - timeLeft) / totalTime) * 100
-    : 0;
-
-  const taskLimit = planLimit('tasksPerDay');
-  const visibleTasks = taskLimit === -1 ? tasks : tasks.slice(0, taskLimit);
-  const isLimitReached = taskLimit !== -1 && tasks.length > taskLimit;
-
-  const todayDone = visibleTasks.filter(t => t.status === 'completed').length;
-  const todayTotal = visibleTasks.length;
+  const todayStr = new Date().toLocaleDateString('en-IN',
+    { weekday:'long', month:'long', day:'numeric' });
+  const completedCount = tasks.filter(t => t.status === 'completed').length;
+  const totalCount = tasks.length;
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-3xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold font-heading text-white">Tasks 📋</h1>
-            {profile?.timeline && (
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs px-2 py-0.5 rounded-full"
-                  style={{
-                    background: profile.timeline === '3months'
-                      ? 'rgba(255,107,107,0.15)'
-                      : profile.timeline === '9months'
-                      ? 'rgba(0,255,148,0.15)'
-                      : 'rgba(255,179,71,0.15)',
-                    color: profile.timeline === '3months'
-                      ? '#FF6B6B'
-                      : profile.timeline === '9months'
-                      ? '#00FF94'
-                      : '#FFB347',
-                  }}>
-                  {profile.timeline === '3months' ? '🔥 Intensive: 4 tasks/day'
-                   : profile.timeline === '9months' ? '🌱 Deep: 1 task/day'
-                   : '⚡ Standard: 2 tasks/day'}
-                </span>
-              </div>
-            )}
-            <p className="text-gray-500 text-sm mt-1">
-              {todayDone}/{todayTotal} done today
-            </p>
+            <h1 className="text-2xl font-bold font-heading text-white"
+              style={{ textShadow:'0 0 15px rgba(0,255,148,0.3)' }}>
+              ⚡ Daily Tasks
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">{todayStr}</p>
           </div>
-          <button onClick={handleGenerateTasks} disabled={generating}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-dark-900 font-bold rounded-xl text-sm hover:bg-opacity-90 transition-all disabled:opacity-50">
-            {generating
-              ? <div className="w-4 h-4 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
-              : <Zap size={14} />
-            }
-            Generate Today's Tasks
+          <button
+            onClick={handleGenerateTasks}
+            disabled={generating}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+            style={{
+              background: generating
+                ? 'rgba(0,255,148,0.05)'
+                : 'linear-gradient(135deg,#00FF94,#7B61FF)',
+              color: '#050508',
+              boxShadow: generating ? 'none' : '0 0 15px rgba(0,255,148,0.3)',
+            }}>
+            {generating ? (
+              <>
+                <div className="w-3 h-3 border-2 border-dark-900 border-t-transparent rounded-full animate-spin"/>
+                Generating...
+              </>
+            ) : (
+              <><Zap size={14}/> Generate Today's Tasks</>
+            )}
           </button>
         </div>
 
+        {/* Active node info */}
+        {activeNode && (
+          <div className="p-3 rounded-xl mb-4"
+            style={{ background:'rgba(0,255,148,0.05)', border:'1px solid rgba(0,255,148,0.12)' }}>
+            <p className="text-xs text-gray-400">
+              📍 Currently on:
+              <span className="text-primary font-semibold ml-1">
+                Day {activeNode.day_number || activeNode.order_index+1}: {activeNode.title}
+              </span>
+            </p>
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          {['today', 'all'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
-                activeTab === tab
-                  ? 'bg-primary text-dark-900'
-                  : 'bg-dark-700 text-gray-400 hover:text-white'
-              }`}>
-              {tab === 'today' ? "Today's Tasks" : 'All Tasks'}
+        <div className="flex gap-2 mb-4">
+          {[
+            { id:'today', label:'Today' },
+            { id:'all', label:'All Tasks' },
+          ].map(tab => (
+            <button key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+              style={activeTab===tab.id
+                ? { background:'#00FF94', color:'#050508' }
+                : { background:'rgba(18,18,26,0.8)', color:'#666', border:'1px solid rgba(34,34,51,0.5)' }
+              }>
+              {tab.label}
             </button>
           ))}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4">
+        {/* Progress */}
+        {totalCount > 0 && activeTab === 'today' && (
+          <div className="p-3 rounded-xl mb-4"
+            style={{ background:'rgba(18,18,26,0.8)', border:'1px solid rgba(34,34,51,0.6)' }}>
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-gray-500">Today's Progress</span>
+              <span style={{ color:'#00FF94' }}>{completedCount}/{totalCount} done</span>
+            </div>
+            <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width:0 }}
+                animate={{ width:`${totalCount > 0 ? (completedCount/totalCount)*100 : 0}%` }}
+                transition={{ duration:1 }}
+                className="h-full rounded-full"
+                style={{ background:'linear-gradient(90deg,#00FF94,#7B61FF)' }}
+              />
+            </div>
+          </div>
+        )}
 
-          {/* Task List */}
-          <div className="flex flex-col gap-3">
-            {loading ? (
-              [...Array(3)].map((_, i) => (
-                <div key={i} className="h-16 bg-dark-700 rounded-xl animate-pulse" />
-              ))
-            ) : tasks.length === 0 ? (
-              <div className="bg-dark-800 border border-dark-600 rounded-xl p-8 text-center">
-                <div className="text-4xl mb-3">🎯</div>
-                <p className="text-gray-400 text-sm mb-4">
-                  No tasks yet. Generate your daily tasks!
-                </p>
-                <button onClick={handleGenerateTasks} disabled={generating}
-                  className="px-4 py-2 bg-primary text-dark-900 font-semibold rounded-lg text-xs">
-                  Generate Tasks
-                </button>
-              </div>
+        {/* Tasks list */}
+        {loading ? (
+          <div className="space-y-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-24 bg-dark-700 rounded-2xl animate-pulse"/>
+            ))}
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-5xl mb-4">📋</div>
+            <h2 className="text-lg font-bold text-white font-heading mb-2">
+              No tasks yet
+            </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              {activeNode
+                ? 'Click Generate to get your tasks for today'
+                : 'Choose your domain first to get tasks'}
+            </p>
+            {!activeNode ? (
+              <a href="/explore-domains"
+                className="px-5 py-2.5 rounded-xl font-bold text-sm text-dark-900"
+                style={{ background:'#00FF94' }}>
+                Choose Domain →
+              </a>
             ) : (
-              visibleTasks.map((task, i) => (
+              <button onClick={handleGenerateTasks} disabled={generating}
+                className="px-5 py-2.5 rounded-xl font-bold text-sm text-dark-900 disabled:opacity-50"
+                style={{ background:'#00FF94', boxShadow:'0 0 15px rgba(0,255,148,0.3)' }}>
+                Generate Tasks ⚡
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {tasks.map((task, i) => {
+              const tc = typeConfig[task.type] || typeConfig['reading'];
+              const isStarted = !!taskStartTimes[task.id];
+              const isDone = task.status === 'completed';
+              return (
                 <motion.div key={task.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => { setSelectedTask(task); fetchTaskNotes(task); }}
-                  className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                    selectedTask?.id === task.id
-                      ? 'border-primary bg-primary/5'
-                      : task.status === 'completed'
-                      ? 'border-success/20 bg-success/5 opacity-60'
-                      : 'border-dark-600 bg-dark-800 hover:border-dark-400'
-                  }`}>
-                  <button
-                    onClick={e => { e.stopPropagation(); completeTask(task.id); }}
-                    disabled={task.status === 'completed'}
-                    className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                      task.status === 'completed'
-                        ? 'border-success bg-success'
-                        : 'border-dark-400 hover:border-primary'
-                    }`}>
-                    {task.status === 'completed' && <CheckCircle size={14} className="text-dark-900" />}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span>{typeIcon[task.type] || '📌'}</span>
-                      <p className={`text-sm font-medium truncate ${
-                        task.status === 'completed' ? 'line-through text-gray-600' : 'text-white'
-                      }`}>
-                        {task.title}
-                      </p>
+                  initial={{ opacity:0, y:8 }}
+                  animate={{ opacity:1, y:0 }}
+                  transition={{ delay:i*0.05 }}
+                  className="p-4 rounded-2xl transition-all"
+                  style={{
+                    background: isDone
+                      ? 'rgba(0,255,148,0.04)'
+                      : 'rgba(10,10,18,0.9)',
+                    border: isDone
+                      ? '1px solid rgba(0,255,148,0.2)'
+                      : '1px solid rgba(34,34,51,0.6)',
+                    opacity: isDone ? 0.7 : 1,
+                  }}>
+                  <div className="flex items-start gap-3">
+
+                    {/* Type icon */}
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
+                      style={{ background:tc.bg, border:`1px solid ${tc.color}20` }}>
+                      {tc.icon}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      ⏱ {task.estimated_minutes || 25} min
-                    </p>
-                  </div>
-                </motion.div>
-              ))
-            )}
-            {isLimitReached && (
-              <div className="mt-2">
-                <UpgradePrompt
-                  feature={`More than ${taskLimit} tasks/day`}
-                  requiredPlan="starter"
-                  compact={true}
-                />
-              </div>
-            )}
-          </div>
 
-          {/* Right Panel */}
-          <div className="flex flex-col gap-4">
-
-            {/* Pomodoro Timer */}
-            <div className="bg-dark-800 border border-dark-600 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-white font-heading text-sm">
-                  {selectedTask
-                    ? `⏱ ${selectedTask.title.substring(0, 20)}...`
-                    : '🍅 Focus Timer'
-                  }
-                </h3>
-                <span className="text-xs text-gray-500">
-                  {sessionsCount} sessions today
-                </span>
-              </div>
-
-              {/* Timer Circle */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative w-32 h-32">
-                  <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                    <circle cx="50" cy="50" r="42"
-                      fill="none" stroke="#222233" strokeWidth="6" />
-                    <circle cx="50" cy="50" r="42"
-                      fill="none" strokeWidth="6"
-                      stroke={isBreak ? '#4A9EFF' : '#00FF94'}
-                      strokeDasharray={`${timerProgress * 2.64}, 264`}
-                      strokeLinecap="round"
-                      className="transition-all duration-1000"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold font-heading text-white">
-                      {formatTime(timeLeft)}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {isBreak ? 'break' : 'focus'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setTimerRunning(!timerRunning)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-                      timerRunning
-                        ? 'bg-warning/20 text-warning border border-warning/30'
-                        : 'bg-primary text-dark-900'
-                    }`}>
-                    {timerRunning ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Start</>}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTimerRunning(false);
-                      setTimeLeft((selectedTask?.estimated_minutes || 25) * 60);
-                      setIsBreak(false);
-                    }}
-                    className="p-2.5 rounded-xl border border-dark-500 text-gray-400 hover:text-white transition-all">
-                    <RotateCcw size={14} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Task Detail */}
-            <AnimatePresence>
-              {selectedTask && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="bg-dark-800 border border-primary/30 rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">{typeIcon[selectedTask.type]}</span>
-                    <h3 className="font-semibold text-white font-heading text-sm">
-                      {selectedTask.title}
-                    </h3>
-                  </div>
-                  <p className="text-gray-400 text-xs mb-4 leading-relaxed">
-                    {selectedTask.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Clock size={12} /> {selectedTask.estimated_minutes} min
-                    </span>
-                    {selectedTask.status !== 'completed' && (
-                      <button
-                        onClick={() => completeTask(selectedTask.id)}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-primary text-dark-900 font-bold rounded-lg text-xs hover:bg-opacity-90 transition-all">
-                        <CheckCircle size={12} /> Done ✅
-                      </button>
-                    )}
-                  </div>
-                  {taskNotes.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-dark-600">
-                      <p className="text-xs text-gray-500 mb-2">📘 Related Notes</p>
-                      {taskNotes.map((note, i) => (
-                        <a key={i} href="/student/notes"
-                          className="block p-2 rounded-lg bg-dark-700 mb-1.5 hover:bg-dark-600 transition-all">
-                          <p className="text-xs font-medium text-white">{note.title}</p>
-                          <p className="text-xs text-gray-600 truncate">
-                            {note.content?.substring(0, 60)}...
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className={`text-sm font-semibold leading-tight ${isDone ? 'line-through text-gray-500' : 'text-white'}`}>
+                            {task.title}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                            {task.description}
                           </p>
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                        </div>
+                        {isDone && (
+                          <CheckCircle size={16} className="text-primary flex-shrink-0 mt-0.5"/>
+                        )}
+                      </div>
 
-            {/* Today's Stats */}
-            <div className="bg-dark-800 border border-dark-600 rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-white mb-3 font-heading">
-                Today's Progress
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Done', value: todayDone, color: 'text-primary' },
-                  { label: 'Remaining', value: todayTotal - todayDone, color: 'text-warning' },
-                  { label: 'Sessions', value: sessionsCount, color: 'text-calm' },
-                ].map((stat, i) => (
-                  <div key={i} className="text-center p-2 bg-dark-700 rounded-lg">
-                    <div className={`text-xl font-bold font-heading ${stat.color}`}>
-                      {stat.value}
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{ background:tc.bg, color:tc.color }}>
+                          {tc.label}
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                          <Clock size={10}/>
+                          {task.estimated_minutes} min
+                        </span>
+                        {isStarted && !isDone && (
+                          <span className="text-xs text-warning flex items-center gap-1">
+                            ⏱️ Timer running
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      {!isDone && (
+                        <div className="flex gap-2 mt-3">
+                          {!isStarted ? (
+                            <button onClick={() => startTask(task.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                              style={{ background:'rgba(74,158,255,0.1)', color:'#4A9EFF', border:'1px solid rgba(74,158,255,0.25)' }}>
+                              <Play size={11}/> Start Task
+                            </button>
+                          ) : (
+                            <button onClick={() => completeTask(task.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                              style={{ background:'rgba(0,255,148,0.12)', color:'#00FF94', border:'1px solid rgba(0,255,148,0.3)', boxShadow:'0 0 10px rgba(0,255,148,0.15)' }}>
+                              <CheckCircle size={11}/> Mark Complete
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {isDone && task.time_spent_minutes > 0 && (
+                        <p className="text-xs text-gray-600 mt-2">
+                          ✅ Completed in {task.time_spent_minutes} minutes
+                        </p>
+                      )}
                     </div>
-                    <div className="text-xs text-gray-500">{stat.label}</div>
                   </div>
-                ))}
-              </div>
-            </div>
-
+                </motion.div>
+              );
+            })}
           </div>
-        </div>
+        )}
+
+        {/* Score info */}
+        {tasks.length > 0 && (
+          <div className="mt-4 p-3 rounded-xl text-center"
+            style={{ background:'rgba(18,18,26,0.5)', border:'1px solid rgba(34,34,51,0.4)' }}>
+            <p className="text-xs text-gray-500">
+              Each completed task gives <span className="text-primary font-bold">+8 Genois Score</span>
+              {' '} · Start task first · Minimum 3 minutes required
+            </p>
+          </div>
+        )}
+
       </div>
     </DashboardLayout>
   );
