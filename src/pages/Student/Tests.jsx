@@ -209,9 +209,7 @@ const Tests = () => {
     let correct = 0;
     questions.forEach((q, i) => {
       const userAns = answers[i];
-      const correctAns = Array.isArray(q.options)
-        ? q.options.indexOf(q.correct_answer)
-        : 0;
+      const correctAns = getOptions(q.options).indexOf(q.correct_answer);
       if (userAns === correctAns) correct++;
     });
 
@@ -250,6 +248,16 @@ const Tests = () => {
         }).eq('id', profile.id);
       }
     } catch(e) { console.error(e); }
+  };
+
+  const getOptions = (opts) => {
+    if (!opts) return [];
+    if (Array.isArray(opts)) return opts;
+    if (typeof opts === 'string') {
+      try { return JSON.parse(opts); } catch { return []; }
+    }
+    if (typeof opts === 'object') return Object.values(opts);
+    return [];
   };
 
   const formatTime = (secs) => {
@@ -317,7 +325,7 @@ const Tests = () => {
                   {q.question}
                 </p>
                 <div className="grid gap-2">
-                  {(q.options || []).map((opt, oi) => (
+                  {getOptions(q.options).map((opt, oi) => (
                     <button key={oi}
                       onClick={() => setAnswers(prev => ({ ...prev, [qi]: oi }))}
                       className="flex items-center gap-3 p-3 rounded-xl text-left text-xs transition-all"
@@ -416,7 +424,7 @@ const Tests = () => {
           <div className="space-y-3 mb-5">
             {questions.map((q, qi) => {
               const userIdx = answers[qi];
-              const correctIdx = (q.options||[]).indexOf(q.correct_answer);
+              const correctIdx = getOptions(q.options).indexOf(q.correct_answer);
               const isCorrect = userIdx === correctIdx;
               return (
                 <div key={qi} className="p-3 rounded-xl"
@@ -440,7 +448,7 @@ const Tests = () => {
                         <p className="text-xs text-gray-500 mb-0.5">
                           Your answer:
                           <span className="text-danger ml-1">
-                            {q.options?.[userIdx] || 'Not answered'}
+                            {getOptions(q.options)[userIdx] || 'Not answered'}
                           </span>
                         </p>
                       )}

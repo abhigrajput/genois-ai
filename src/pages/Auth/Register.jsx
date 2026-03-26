@@ -34,7 +34,16 @@ const Register = () => {
       options: { data: metadata }
     });
 
-    if (error) { toast.error(error.message); setLoading(false); return; }
+    if (error) {
+      if (error.message?.includes('already registered') || error.status === 422) {
+        toast.error('Email already registered. Please login instead.');
+        navigate('/login');
+      } else {
+        toast.error(error.message);
+      }
+      setLoading(false);
+      return;
+    }
 
     toast.success("Welcome to Genois AI! You just did something most students don't — you started. 🎯");
     setTimeout(() => {
