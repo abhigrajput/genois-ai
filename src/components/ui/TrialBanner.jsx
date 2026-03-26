@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { checkTrialStatus } from '../../lib/trial';
+import { checkTrial } from '../../lib/trial';
 import useStore from '../../store/useStore';
 
 const TrialBanner = () => {
   const { profile } = useStore();
-  const trial = checkTrialStatus(profile);
+  const trial = checkTrial(profile);
 
   if (!trial || trial.isPaid || (!trial.active && !trial.expired)) return null;
 

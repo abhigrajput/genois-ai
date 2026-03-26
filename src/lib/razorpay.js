@@ -1,45 +1,81 @@
-const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID;
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
-export const PLAN_PRICES = {
-  starter:  { amount: 29900,  label: 'Starter Plan',  duration: 30 },
-  identity: { amount: 49900,  label: 'Identity Plan', duration: 30 },
-  pro:      { amount: 199900, label: 'Pro Plan',       duration: 30 },
+export const PLANS = {
+  starter: {
+    id: 'starter',
+    name: 'Starter',
+    amount: 29900,
+    display: '₹299',
+    duration: 30,
+    color: '#4A9EFF',
+    features: [
+      'Full roadmap access',
+      'Unlimited tasks',
+      'Daily + Weekly tests',
+      'Study notes library',
+      'AI task generation',
+    ],
+  },
+  identity: {
+    id: 'identity',
+    name: 'Identity',
+    amount: 49900,
+    display: '₹499',
+    duration: 30,
+    color: '#7B61FF',
+    features: [
+      'Everything in Starter',
+      'Skill Identity page',
+      'Score breakdown',
+      'Public profile link',
+      'Analytics dashboard',
+    ],
+  },
+  pro: {
+    id: 'pro',
+    name: 'Pro',
+    amount: 199900,
+    display: '₹1999',
+    duration: 30,
+    color: '#FFD700',
+    features: [
+      'Everything in Identity',
+      'Company visibility',
+      'Job readiness meter',
+      'Resume destroyer',
+      'Priority support',
+      'AI mentor chat',
+    ],
+  },
 };
 
-export const loadRazorpay = () => {
-  return new Promise(resolve => {
-    if (window.Razorpay) { resolve(true); return; }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+export const loadRazorpay = () => new Promise(resolve => {
+  if (window.Razorpay) { resolve(true); return; }
+  const script = document.createElement('script');
+  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  script.onload = () => resolve(true);
+  script.onerror = () => resolve(false);
+  document.body.appendChild(script);
+});
 
 export const initiatePayment = async ({
-  plan,
-  profile,
-  onSuccess,
-  onFailure,
-  supabase,
+  planId, profile, supabase, onSuccess, onFailure,
 }) => {
   const loaded = await loadRazorpay();
   if (!loaded) {
-    alert('Payment failed to load. Check internet connection.');
+    alert('Payment gateway failed to load. Check internet.');
     return;
   }
 
-  const planConfig = PLAN_PRICES[plan];
-  if (!planConfig) return;
+  const plan = PLANS[planId];
+  if (!plan) return;
 
   const options = {
-    key: RAZORPAY_KEY_ID,
-    amount: planConfig.amount,
+    key: RAZORPAY_KEY,
+    amount: plan.amount,
     currency: 'INR',
     name: 'Genois AI',
-    description: planConfig.label,
-    image: 'https://genois-ai.vercel.app/logo.png',
+    description: `${plan.name} Plan — Monthly`,
     prefill: {
       name: profile?.full_name || '',
       email: profile?.email || '',
@@ -47,40 +83,38 @@ export const initiatePayment = async ({
     },
     notes: {
       student_id: profile?.id,
-      plan,
+      plan: planId,
     },
-    theme: {
-      color: '#00FF94',
-    },
-    handler: async function (response) {
+    theme: { color: '#00FF94' },
+    handler: async (response) => {
       try {
-        const expiresAt = new Date(Date.now() + planConfig.duration * 24 * 60 * 60 * 1000);
+        const expires = new Date(
+          Date.now() + plan.duration * 24 * 60 * 60 * 1000
+        ).toISOString();
 
         await supabase.from('payments').insert({
           student_id: profile.id,
           razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_order_id: response.razorpay_order_id || '',
-          razorpay_signature: response.razorpay_signature || '',
-          amount: planConfig.amount,
-          plan,
+          amount: plan.amount,
+          plan: planId,
           status: 'success',
+          created_at: new Date().toISOString(),
         });
 
         await supabase.from('profiles').update({
           subscription_status: 'active',
-          subscription_plan: plan,
-          subscription_expires_at: expiresAt.toISOString(),
-          razorpay_payment_id: response.razorpay_payment_id,
-          plan,
+          subscription_plan: planId,
+          subscription_expires_at: expires,
+          plan: planId,
         }).eq('id', profile.id);
 
         if (onSuccess) onSuccess(response);
-      } catch (err) {
-        console.error('Payment save error:', err);
+      } catch (e) {
+        console.error('Payment save error:', e);
       }
     },
     modal: {
-      ondismiss: function () {
+      ondismiss: () => {
         if (onFailure) onFailure('dismissed');
       },
     },

@@ -1,320 +1,248 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Zap, ArrowLeft } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { initiatePayment } from '../lib/razorpay';
+import { PLANS, initiatePayment } from '../lib/razorpay';
+import { checkTrial } from '../lib/trial';
 import useStore from '../store/useStore';
 import toast from 'react-hot-toast';
-
-const PLANS = [
-  {
-    key: 'free',
-    label: 'Free',
-    price: 0,
-    color: '#666',
-    subtitle: 'Get started',
-    features: [
-      { label: '2 tasks/day',            included: true  },
-      { label: '3 tests/month',          included: true  },
-      { label: '1 note',                 included: true  },
-      { label: 'AI Roadmap',             included: true  },
-      { label: '2AM Anxiety Chat',       included: true  },
-      { label: 'Public Profile',         included: true  },
-      { label: 'Skill Graph',            included: false },
-      { label: 'Analytics Dashboard',    included: false },
-      { label: 'Skill DNA Report',       included: false },
-      { label: 'Score Breakdown',        included: false },
-      { label: 'Resume Export',          included: false },
-    ],
-  },
-  {
-    key: 'starter',
-    label: 'Starter',
-    price: 299,
-    color: '#4A9EFF',
-    subtitle: 'Build your foundation',
-    badge: 'Popular',
-    features: [
-      { label: 'Unlimited tasks',        included: true  },
-      { label: 'Unlimited tests',        included: true  },
-      { label: 'Unlimited notes',        included: true  },
-      { label: 'AI Roadmap',             included: true  },
-      { label: '2AM Anxiety Chat',       included: true  },
-      { label: 'Public Profile',         included: true  },
-      { label: 'Skill Graph',            included: true  },
-      { label: 'Analytics Dashboard',    included: false },
-      { label: 'Skill DNA Report',       included: false },
-      { label: 'Score Breakdown',        included: false },
-      { label: 'Resume Export',          included: true  },
-    ],
-  },
-  {
-    key: 'identity',
-    label: 'Identity',
-    price: 499,
-    color: '#7B61FF',
-    subtitle: 'Build your verified identity',
-    badge: 'Best Value',
-    features: [
-      { label: 'Unlimited tasks',        included: true  },
-      { label: 'Unlimited tests',        included: true  },
-      { label: 'Unlimited notes',        included: true  },
-      { label: 'AI Roadmap',             included: true  },
-      { label: '2AM Anxiety Chat',       included: true  },
-      { label: 'Public Profile',         included: true  },
-      { label: 'Skill Graph',            included: true  },
-      { label: 'Analytics Dashboard',    included: true  },
-      { label: 'Skill DNA Report',       included: true  },
-      { label: 'Score Breakdown',        included: true  },
-      { label: 'Resume Export',          included: true  },
-    ],
-  },
-  {
-    key: 'pro',
-    label: 'Pro',
-    price: 1999,
-    color: '#FFD700',
-    subtitle: 'Maximum visibility',
-    features: [
-      { label: 'Everything in Identity', included: true  },
-      { label: 'Priority placement',     included: true  },
-      { label: 'Company DMs enabled',    included: true  },
-      { label: 'Verified badge',         included: true  },
-      { label: '1-on-1 mentor session',  included: true  },
-      { label: 'Featured in search',     included: true  },
-      { label: 'LinkedIn sync (beta)',   included: true  },
-      { label: 'Resume Export',          included: true  },
-      { label: 'Score Breakdown',        included: true  },
-      { label: 'Skill DNA Report',       included: true  },
-      { label: 'Analytics Dashboard',    included: true  },
-    ],
-  },
-];
-
-const FAQ = [
-  { q: 'Is payment live?', a: 'Not yet — we are in early access. Join the waitlist and we will notify you when your plan activates. Your spot is reserved.' },
-  { q: 'Can I switch plans later?', a: 'Yes. You can upgrade or downgrade anytime. Your data is always preserved.' },
-  { q: 'Will my score reset if I downgrade?', a: 'Never. Your Genois Score™ is built from real activity and is always yours, regardless of plan.' },
-  { q: 'Is this for any college?', a: 'Yes. Genois is built specifically for Tier 2 and Tier 3 engineering colleges across India.' },
-  { q: 'What happens to free users?', a: 'Free plan stays free forever with core features. Paid plans unlock advanced analytics and company visibility.' },
-];
 
 const Pricing = () => {
   const { profile } = useStore();
   const navigate = useNavigate();
   const [paying, setPaying] = useState(null);
 
-  const handlePay = async (planKey) => {
-    if (planKey === 'free') {
-      navigate(profile ? '/app' : '/register');
-      return;
-    }
+  const trial = profile ? checkTrial(profile) : null;
+
+  const handlePay = async (planId) => {
     if (!profile) {
       navigate('/login');
       return;
     }
-    setPaying(planKey);
+    if (planId === 'free') {
+      navigate('/register');
+      return;
+    }
+    setPaying(planId);
     await initiatePayment({
-      plan: planKey,
+      planId,
       profile,
       supabase,
       onSuccess: (response) => {
-        toast.success(`${planKey} plan activated! Payment ID: ${response.razorpay_payment_id}`);
+        toast.success(
+          `${PLANS[planId].name} activated!`,
+          { duration: 4000 }
+        );
         setPaying(null);
-        window.location.reload();
+        navigate('/student/dashboard');
       },
       onFailure: (reason) => {
-        if (reason !== 'dismissed') toast.error('Payment failed. Try again.');
+        if (reason !== 'dismissed') {
+          toast.error('Payment failed. Try again.');
+        }
         setPaying(null);
       },
     });
   };
 
-  const currentPlan = profile?.plan || 'free';
+  const freePlan = {
+    id: 'free',
+    name: 'Free',
+    display: '₹0',
+    color: '#00FF94',
+    features: [
+      '14-day full access trial',
+      'Basic roadmap (3 nodes)',
+      '2 tasks per day',
+      '5 test questions',
+      'Basic score tracking',
+    ],
+  };
+
+  const allPlans = [freePlan, ...Object.values(PLANS)];
 
   return (
-    <div className="min-h-screen cyber-grid text-gray-100 pb-24" style={{ position:'relative' }}>
-
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-dark-900/80 backdrop-blur-md border-b border-dark-700">
-        <Link to="/" className="text-xl font-bold font-heading" style={{ color: '#00FF94', textShadow: '0 0 20px rgba(0,255,148,0.4)' }}>
-          GENOIS AI
-        </Link>
-        <div className="flex items-center gap-3">
-          {profile ? (
-            <Link to="/app" className="text-sm text-gray-400 hover:text-white flex items-center gap-1">
-              <ArrowLeft size={14} /> Back to App
-            </Link>
-          ) : (
-            <>
-              <Link to="/login"    className="text-sm text-gray-400 hover:text-white px-4 py-2">Login</Link>
-              <Link to="/register" className="text-sm font-semibold px-4 py-2 rounded-lg bg-primary text-dark-900 hover:bg-opacity-90 transition-all">Get Started</Link>
-            </>
-          )}
-        </div>
-      </nav>
-
-      <div className="pt-28 px-6 max-w-6xl mx-auto">
+    <div className="min-h-screen cyber-grid py-12 px-4"
+      style={{ background: '#050508' }}>
+      <div className="max-w-5xl mx-auto">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-4">
-            <Zap size={12} className="text-primary" />
-            <span className="text-xs text-primary font-medium">Early Access Pricing</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold font-heading text-white mb-4">
-            Build your identity.<br />
-            <span style={{ color: '#00FF94' }}>Not just your resume.</span>
-          </h1>
-          <p className="text-gray-400 max-w-xl mx-auto text-sm">
-            Every plan gives you the tools to prove your skills through real work — not certificates or CGPA.
-            Join the waitlist for early access pricing.
+        <div className="text-center mb-12">
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl font-bold font-heading mb-4"
+            style={{
+              background: 'linear-gradient(135deg,#00FF94,#7B61FF)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 0 20px rgba(0,255,148,0.3))',
+            }}>
+            Simple Pricing
+          </motion.h1>
+          <p className="text-gray-400 text-sm mb-4">
+            Start free for 14 days. No credit card required.
           </p>
-        </motion.div>
 
-        {/* Plan Cards */}
-        <div className="grid md:grid-cols-4 gap-4 mb-16">
-          {PLANS.map((plan, i) => {
-            const isCurrentPlan = currentPlan === plan.key;
-            const isLoading = paying === plan.key;
+          {trial && !trial.isPaid && !trial.expired && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-4"
+              style={{ background: 'rgba(0,255,148,0.08)', border: '1px solid rgba(0,255,148,0.25)' }}>
+              <Zap size={14} className="text-primary" />
+              <span className="text-sm text-primary font-semibold">
+                You have {trial.daysLeft} days of free trial remaining
+              </span>
+            </div>
+          )}
+          {trial?.expired && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-4"
+              style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.25)' }}>
+              <span className="text-sm text-danger font-semibold">
+                Your trial has expired — choose a plan to continue
+              </span>
+            </div>
+          )}
+        </div>
 
+        {/* Plan cards */}
+        <div className="grid md:grid-cols-4 gap-4 mb-10">
+          {allPlans.map((plan, i) => {
+            const isPro = plan.id === 'pro';
+            const isCurrent = profile?.plan === plan.id ||
+              (plan.id === 'free' && !profile?.plan);
             return (
-              <motion.div key={plan.key}
+              <motion.div key={plan.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="relative rounded-2xl p-5 flex flex-col transition-all card-hover cyber-corner"
+                transition={{ delay: i * 0.08 }}
+                className="relative rounded-2xl p-5 flex flex-col"
                 style={{
-                  background: plan.key === 'identity'
-                    ? `linear-gradient(135deg, ${plan.color}10, rgba(8,8,14,0.9))`
-                    : 'rgba(8,8,14,0.9)',
-                  border: `1px solid ${isCurrentPlan ? plan.color : plan.color + '25'}`,
-                  boxShadow: `0 0 30px ${plan.color}08`,
+                  background: isPro
+                    ? `linear-gradient(135deg, rgba(255,215,0,0.06), rgba(8,8,14,0.95))`
+                    : 'rgba(8,8,14,0.92)',
+                  border: `1px solid ${isCurrent
+                    ? plan.color + '50'
+                    : isPro
+                    ? 'rgba(255,215,0,0.3)'
+                    : 'rgba(34,34,51,0.6)'}`,
+                  boxShadow: isPro
+                    ? '0 0 30px rgba(255,215,0,0.08)'
+                    : isCurrent
+                    ? `0 0 20px ${plan.color}12`
+                    : 'none',
                 }}>
 
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold"
-                    style={{ background: plan.color, color: '#0A0A0F' }}>
-                    {plan.badge}
+                {isPro && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold text-dark-900"
+                      style={{ background: '#FFD700', boxShadow: '0 0 12px rgba(255,215,0,0.5)' }}>
+                      Most Popular
+                    </span>
                   </div>
                 )}
-                {isCurrentPlan && (
-                  <div className="absolute -top-3 right-4 px-3 py-1 rounded-full text-xs font-bold bg-dark-600 border border-dark-400 text-gray-300">
-                    Current
+
+                {isCurrent && (
+                  <div className="absolute -top-3 right-3">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold"
+                      style={{ background: `${plan.color}20`, color: plan.color, border: `1px solid ${plan.color}40` }}>
+                      Current
+                    </span>
                   </div>
                 )}
 
                 <div className="mb-4">
-                  <div className="text-sm font-bold mb-1" style={{ color: plan.color }}>{plan.label}</div>
-                  <div className="text-xs text-gray-500 mb-3">{plan.subtitle}</div>
+                  <h3 className="text-base font-bold text-white font-heading mb-1">
+                    {plan.name}
+                  </h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold font-heading text-white">
-                      {plan.price === 0 ? 'Free' : `₹${plan.price}`}
+                    <span className="text-3xl font-bold font-heading"
+                      style={{ color: plan.color }}>
+                      {plan.display}
                     </span>
-                    {plan.price > 0 && <span className="text-xs text-gray-500">/mo</span>}
+                    {plan.id !== 'free' && (
+                      <span className="text-xs text-gray-600">/month</span>
+                    )}
                   </div>
+                  {plan.id === 'free' && (
+                    <p className="text-xs text-primary mt-1">14 days full access</p>
+                  )}
                 </div>
 
-                <div className="flex-1 space-y-2 mb-5">
-                  {plan.features.map((f, j) => (
-                    <div key={j} className="flex items-center gap-2">
-                      {f.included
-                        ? <CheckCircle size={13} style={{ color: plan.color, flexShrink: 0 }} />
-                        : <XCircle    size={13} className="text-dark-500 flex-shrink-0" />
-                      }
-                      <span className={`text-xs ${f.included ? 'text-gray-300' : 'text-gray-600 line-through'}`}>
-                        {f.label}
-                      </span>
-                    </div>
+                <ul className="space-y-2 mb-5 flex-1">
+                  {plan.features.map((feat, fi) => (
+                    <li key={fi} className="flex items-start gap-2">
+                      <Check size={13} className="flex-shrink-0 mt-0.5"
+                        style={{ color: plan.color }} />
+                      <span className="text-xs text-gray-400 leading-relaxed">{feat}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
 
-                {plan.price === 0 ? (
-                  <Link to={profile ? '/app' : '/register'}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all block"
-                    style={{ background: `${plan.color}15`, color: plan.color, border: `1px solid ${plan.color}30` }}>
-                    Start Free →
-                  </Link>
-                ) : (
-                  <button onClick={() => handlePay(plan.key)}
-                    disabled={isLoading || isCurrentPlan}
-                    className="w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                    style={{ background: plan.color, color: '#0A0A0F' }}>
-                    {isLoading
-                      ? <div className="w-4 h-4 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
-                      : isCurrentPlan ? 'Current Plan' : `Pay ₹${plan.price}/mo`
-                    }
-                  </button>
-                )}
+                <button
+                  onClick={() => handlePay(plan.id)}
+                  disabled={paying === plan.id || isCurrent}
+                  className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+                  style={isCurrent ? {
+                    background: `${plan.color}10`,
+                    color: plan.color,
+                    border: `1px solid ${plan.color}30`,
+                  } : isPro ? {
+                    background: 'linear-gradient(135deg,#FFD700,#FFB347)',
+                    color: '#050508',
+                    boxShadow: '0 0 20px rgba(255,215,0,0.3)',
+                  } : {
+                    background: `${plan.color}15`,
+                    color: plan.color,
+                    border: `1px solid ${plan.color}35`,
+                    boxShadow: `0 0 12px ${plan.color}10`,
+                  }}>
+                  {isCurrent ? 'Current Plan'
+                    : paying === plan.id ? 'Processing...'
+                    : plan.id === 'free' ? 'Start Free →'
+                    : `Pay ${plan.display}/mo`}
+                </button>
               </motion.div>
             );
           })}
         </div>
 
-        {/* Feature Comparison Table */}
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-          className="mb-16">
-          <h2 className="text-2xl font-bold font-heading text-white text-center mb-8">Full Feature Comparison</h2>
-          <div className="overflow-x-auto rounded-2xl border border-dark-600">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-dark-600">
-                  <th className="text-left p-4 text-gray-400 font-medium">Feature</th>
-                  {PLANS.map(p => (
-                    <th key={p.key} className="p-4 text-center font-bold" style={{ color: p.color }}>
-                      {p.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { label: 'AI Roadmap',          values: ['✓','✓','✓','✓'] },
-                  { label: 'Tasks / Day',          values: ['2','∞','∞','∞'] },
-                  { label: 'Tests / Month',        values: ['3','∞','∞','∞'] },
-                  { label: 'Notes',                values: ['1','∞','∞','∞'] },
-                  { label: '2AM Anxiety Chat',     values: ['✓','✓','✓','✓'] },
-                  { label: 'Public Profile',       values: ['✓','✓','✓','✓'] },
-                  { label: 'Skill Graph',          values: ['✗','✓','✓','✓'] },
-                  { label: 'Analytics Dashboard',  values: ['✗','✗','✓','✓'] },
-                  { label: 'Skill DNA AI Report',  values: ['✗','✗','✓','✓'] },
-                  { label: 'Score Breakdown',      values: ['✗','✗','✓','✓'] },
-                  { label: 'Resume Export',        values: ['✗','✓','✓','✓'] },
-                  { label: 'Priority Placement',   values: ['✗','✗','✗','✓'] },
-                  { label: 'Company DMs',          values: ['✗','✗','✗','✓'] },
-                  { label: 'Verified Badge',       values: ['✗','✗','✗','✓'] },
-                ].map((row, i) => (
-                  <tr key={i} className={`border-b border-dark-700 ${i % 2 === 0 ? '' : 'bg-dark-800/30'}`}>
-                    <td className="p-4 text-gray-300">{row.label}</td>
-                    {row.values.map((val, j) => (
-                      <td key={j} className={`p-4 text-center font-mono text-sm ${
-                        val === '✓' ? 'text-success' :
-                        val === '✗' ? 'text-dark-500' :
-                        'text-gray-300'
-                      }`}>{val}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
+        {/* Trust section */}
+        <div className="grid md:grid-cols-3 gap-4 mb-10">
+          {[
+            { icon: '🔒', title: 'Secure Payment', desc: 'Razorpay secured. Bank-grade encryption.' },
+            { icon: '↩️', title: 'No Hidden Fees', desc: 'What you see is what you pay. Cancel anytime.' },
+            { icon: '⚡', title: 'Instant Access', desc: 'Account activated immediately after payment.' },
+          ].map((item, i) => (
+            <div key={i} className="p-4 rounded-xl text-center"
+              style={{ background: 'rgba(8,8,14,0.8)', border: '1px solid rgba(34,34,51,0.5)' }}>
+              <div className="text-2xl mb-2">{item.icon}</div>
+              <p className="text-xs font-bold text-white mb-1">{item.title}</p>
+              <p className="text-xs text-gray-600">{item.desc}</p>
+            </div>
+          ))}
+        </div>
 
         {/* FAQ */}
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-          className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold font-heading text-white text-center mb-8">FAQ</h2>
-          <div className="space-y-3">
-            {FAQ.map((item, i) => (
-              <div key={i} className="bg-dark-800 border border-dark-600 rounded-xl p-4">
-                <p className="text-sm font-semibold text-white mb-2">{item.q}</p>
-                <p className="text-xs text-gray-400 leading-relaxed">{item.a}</p>
+        <div className="rounded-2xl p-6"
+          style={{ background: 'rgba(8,8,14,0.9)', border: '1px solid rgba(34,34,51,0.5)' }}>
+          <h3 className="text-sm font-bold text-white font-heading mb-4">
+            Frequently Asked Questions
+          </h3>
+          <div className="space-y-4">
+            {[
+              { q: 'What happens after 14 days?', a: 'Your account switches to Free plan with limited features. Upgrade anytime to continue with full access.' },
+              { q: 'Can I cancel anytime?', a: 'Yes. No contracts. Cancel anytime from your profile settings.' },
+              { q: 'Is my payment secure?', a: 'Yes. Powered by Razorpay — trusted by 5 lakh+ businesses in India.' },
+              { q: 'Do you offer student discounts?', a: 'The pricing is already student-friendly. Use coupon code STUDENT10 for 10% off.' },
+            ].map((faq, i) => (
+              <div key={i} className="pb-4 border-b border-dark-600 last:border-0">
+                <p className="text-xs font-bold text-white mb-1">{faq.q}</p>
+                <p className="text-xs text-gray-500 leading-relaxed">{faq.a}</p>
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
       </div>
     </div>
